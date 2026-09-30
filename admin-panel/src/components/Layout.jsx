@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
+import { useSystemHealth, SystemBanner } from './SystemHealth.jsx';
 
 // Sidebar items. Phase 1 ships Orders; the rest are placeholders shown
 // disabled so the eventual IA is visible.
@@ -14,10 +15,14 @@ const NAV = [
   { to: '/page-editor', label: 'ল্যান্ডিং পেজ', icon: '🎨', ready: true, adminOnly: true },
   { to: '/tracking', label: 'ট্র্যাকিং', icon: '📈', ready: true, adminOnly: true },
   { to: '/settings', label: 'সেটিংস', icon: '⚙️', ready: true, adminOnly: true },
+  { to: '/system', label: 'সিস্টেম স্ট্যাটাস', icon: '🩺', ready: true, badge: 'errors' },
 ];
 
 export default function Layout() {
   const { admin, logout } = useAuth();
+  const sys = useSystemHealth();
+  const dbDown = sys.unreachable || (sys.health && sys.health.db?.state !== 'connected');
+  const badgeCount = sys.unseen.length + (dbDown ? 1 : 0);
 
   return (
     <div className="shell">
@@ -29,6 +34,7 @@ export default function Layout() {
               <NavLink key={item.to} to={item.to} className="nav-item">
                 <span className="nav-icon">{item.icon}</span>
                 {item.label}
+                {item.badge === 'errors' && badgeCount > 0 && <span className="nav-badge">{badgeCount}</span>}
               </NavLink>
             ) : (
               <span key={item.to} className="nav-item disabled" title="শীঘ্রই আসছে">
@@ -49,6 +55,7 @@ export default function Layout() {
             <button className="btn-ghost" onClick={logout}>লগআউট</button>
           </div>
         </header>
+        <SystemBanner {...sys} />
         <main className="content">
           <Outlet />
         </main>

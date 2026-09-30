@@ -201,3 +201,32 @@ input:focus, textarea:focus { outline: none; border-color: var(--brand); }
   .sidebar { width: 64px; }
   .sidebar .brand, .nav-item span:not(.nav-icon), .soon { display: none; }
 }
+
+/* ── System status (DB/server errors) ───────────────── */
+.sys-banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 20px; font-weight: 600; }
+.sys-banner.critical { background: #fee2e2; color: #991b1b; border-bottom: 1px solid #fca5a5; }
+.sys-banner.warning { background: #fef3c7; color: #92400e; border-bottom: 1px solid #fcd34d; }
+.sys-banner a { color: inherit; white-space: nowrap; }
+.nav-badge { margin-left: auto; background: var(--brand); color: #fff; border-radius: 999px; font-size: .7rem; padding: 1px 7px; font-weight: 700; }
+.sys-ok { color: #15803d; }
+.sys-warning { color: #b45309; }
+.sys-critical { color: #b91c1c; }
+.sys-meter { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 6px 0; }
+.sys-meter span { display: block; height: 100%; }
+.sys-meter span.ok { background: #22c55e; }
+.sys-meter span.warning { background: #f59e0b; }
+.sys-meter span.critical { background: #ef4444; }
+.sys-list { display: flex; flex-direction: column; gap: 10px; }
+.sys-item { border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: var(--radius); padding: 10px 12px; }
+.sys-item.critical { border-left-color: #ef4444; }
+.sys-item.error { border-left-color: #f97316; }
+.sys-item.warning { border-left-color: #f59e0b; }
+.sys-item.new { background: #fffbeb; }
+.sys-item-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; cursor: pointer; }
+.sys-time { margin-left: auto; font-size: .8rem; }
+.sys-pill.critical { background: #fee2e2; color: #991b1b; }
+.sys-pill.error { background: #ffedd5; color: #9a3412; }
+.sys-pill.warning { background: #fef3c7; color: #92400e; }
+.sys-new { background: var(--brand); color: #fff; font-size: .68rem; padding: 1px 6px; border-radius: 4px; }
+.sys-hint { margin: 6px 0; font-size: .88rem; }
+.sys-tech { background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: .78rem; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0; }

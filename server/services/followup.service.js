@@ -1,6 +1,7 @@
 import { IncompleteOrder } from '../models/index.js';
 import { getSmsConfig, sendFollowUpSms } from './sms.service.js';
 import { getSetting } from './settings.service.js';
+import { reportError } from './systemErrors.js';
 
 /**
  * One sweep: find abandoned checkouts that have a valid phone, are still 'new',
@@ -43,7 +44,7 @@ let timer = null;
 export function startFollowUpSweep(intervalMs = 5 * 60 * 1000) {
   if (timer) return;
   timer = setInterval(() => {
-    runFollowUpSweep().catch((e) => console.error('[followup] sweep error:', e.message));
+    runFollowUpSweep().catch((e) => reportError('followup', e));
   }, intervalMs);
   timer.unref?.(); // don't keep the process alive just for this
   console.log('[followup] auto follow-up sweep scheduled');

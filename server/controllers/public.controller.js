@@ -14,6 +14,7 @@ import { buildPurchaseJobs, buildMomentJobs } from '../services/tracking/index.j
 import { extractCity } from '../services/tracking/hash.util.js';
 import { enqueueTrackingJobs } from '../queues/tracking.queue.js';
 import { sendConfirmationSms } from '../services/sms.service.js';
+import { reportError } from '../services/systemErrors.js';
 
 /** Fixed exit-intent discount (৳). The only discount a visitor can receive. */
 const EXIT_DISCOUNT = 20;
@@ -35,7 +36,7 @@ export async function renderLanding(req, res, next) {
     }
 
     // Traffic counter for the dashboard conversion rate (fire-and-forget).
-    DailyStat.track(req.isNewSession).catch(() => {});
+    DailyStat.track(req.isNewSession).catch((e) => reportError('traffic-stat', e));
 
     const defaultOffer = offers.find((o) => o.isDefault) || offers[0] || null;
     const defaultZone = zones.find((z) => z.isDefault) || zones[0] || null;
@@ -96,14 +97,14 @@ export async function submitCheckout(req, res, next) {
     IncompleteOrder.updateOne(
       { sessionId: req.sessionId, status: { $ne: 'converted' } },
       { $set: { status: 'converted' } }
-    ).catch((e) => console.error('[checkout] incomplete convert failed:', e.message));
+    ).catch((e) => reportError('checkout:incomplete-convert', e));
 
     // Fire server-side Purchase (richest identifiers → best EMQ). Non-blocking;
     // never lets a tracking hiccup break the order confirmation.
     try {
       await enqueueTrackingJobs(buildPurchaseJobs(order));
     } catch (e) {
-      console.error('[checkout] purchase tracking enqueue failed:', e.message);
+      reportError('checkout:tracking-enqueue', e);
     }
 
     // Confirmation SMS (fire-and-forget).
@@ -173,7 +174,7 @@ export async function saveDraft(req, res) {
       { upsert: true, setDefaultsOnInsert: true }
     );
   } catch (e) {
-    console.error('[draft] error:', e.message);
+    reportError('draft', e);
   }
   return res.status(204).end();
 }
@@ -225,9 +226,9 @@ export async function trackMoment(req, res) {
       },
     });
 
-    enqueueTrackingJobs(jobs).catch((e) => console.error('[track] enqueue failed:', e.message));
+    enqueueTrackingJobs(jobs).catch((e) => reportError('track:enqueue', e));
   } catch (e) {
-    console.error('[track] error:', e.message);
+    reportError('track', e);
   }
   return res.status(204).end();
 }
@@ -271,7 +272,7 @@ export async function saveExitLead(req, res) {
 
     return res.status(200).json({ ok: true, message: 'আপনার তথ্য সংরক্ষণ করা হয়েছে।' });
   } catch (err) {
-    console.error('[exit-lead] error:', err.message);
+    reportError('exit-lead', err);
     return res.status(200).json({ ok: false, error: 'তথ্য সংরক্ষণ করা যায়নি।' });
   }
 }
@@ -287,7 +288,7 @@ export async function recordSectionDwell(req, res) {
     await DailyStat.recordSectionDwell({ dwell, exitSection, views });
     return res.status(204).end();
   } catch (err) {
-    console.error('[section-dwell] error:', err.message);
+    reportError('section-dwell', err);
     return res.status(204).end();
   }
 }

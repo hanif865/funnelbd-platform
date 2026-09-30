@@ -14,6 +14,7 @@ import { notFound, errorHandler } from './middlewares/error.js';
 import publicRoutes from './routes/public.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import { startFollowUpSweep } from './services/followup.service.js';
+import { reportError, watchDbConnection } from './services/systemErrors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -74,8 +75,24 @@ export function createApp() {
   return app;
 }
 
+/**
+ * Connect to MongoDB; if the first attempt fails, keep retrying in the
+ * background instead of exiting — the web server stays up so the admin panel
+ * can show *why* (System Status) rather than the whole site vanishing.
+ */
+async function connectWithRetry(delayMs = 15000) {
+  try {
+    await connectDB();
+  } catch (err) {
+    reportError('db', err);
+    console.error(`[db] initial connect failed — retrying in ${delayMs / 1000}s`);
+    setTimeout(() => connectWithRetry(delayMs), delayMs).unref?.();
+  }
+}
+
 async function start() {
-  await connectDB();
+  watchDbConnection();
+  await connectWithRetry();
   const app = createApp();
   app.listen(config.port, () => {
     console.log(`[web] FunnelBD running → ${config.baseUrl} (env: ${config.env})`);

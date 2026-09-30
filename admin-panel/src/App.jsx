@@ -12,6 +12,7 @@ import Offers from './pages/Offers.jsx';
 import Settings from './pages/Settings.jsx';
 import PageEditor from './pages/PageEditor.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import System from './pages/System.jsx';
 
 function Protected({ children }) {
   const { admin, loading } = useAuth();
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/page-editor" element={<PageEditor />} />
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/system" element={<System />} />
         {/* Phase 4: Dashboard mounts here later. */}
       </Route>
       <Route path="*" element={<Navigate to="/orders" replace />} />

@@ -2,6 +2,7 @@ import { Worker } from 'bullmq';
 import { createRedisConnection } from '../config/redis.js';
 import { runTrackingJob } from '../services/tracking/index.js';
 import { TRACKING_QUEUE } from './tracking.queue.js';
+import { reportError } from '../services/systemErrors.js';
 
 /**
  * BullMQ worker that processes queued tracking jobs. Started by the dedicated
@@ -19,7 +20,7 @@ export function startTrackingWorker() {
     console.log(`[worker] ${job.name} done`);
   });
   worker.on('failed', (job, err) => {
-    console.error(`[worker] ${job?.name} failed:`, err.message);
+    reportError(`worker:${job?.name || 'job'}`, err);
   });
 
   console.log('[worker] tracking worker started');

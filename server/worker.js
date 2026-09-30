@@ -1,6 +1,7 @@
 import { connectDB } from './config/db.js';
 import { isRedisEnabled } from './config/redis.js';
 import { startTrackingWorker } from './queues/tracking.worker.js';
+import { reportError, watchDbConnection } from './services/systemErrors.js';
 
 /**
  * BullMQ worker process (separate from web). Processes the tracking queue.
@@ -8,6 +9,7 @@ import { startTrackingWorker } from './queues/tracking.worker.js';
  * tracking inline and this process has nothing to do.
  */
 async function start() {
+  watchDbConnection();
   await connectDB();
 
   if (!isRedisEnabled()) {
@@ -19,6 +21,6 @@ async function start() {
 }
 
 start().catch((err) => {
-  console.error('[worker] failed to start:', err);
+  reportError('worker:start', err);
   process.exit(1);
 });

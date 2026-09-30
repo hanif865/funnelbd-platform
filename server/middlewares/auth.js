@@ -6,23 +6,51 @@ import { Admin } from '../models/index.js';
  * (`fbd_admin`) or a Bearer Authorization header, verifies it, and loads the
  * admin. Rejects inactive accounts.
  */
+function readToken(req) {
+  const bearer = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7)
+    : null;
+  return req.cookies?.fbd_admin || bearer;
+}
+
 export async function requireAdmin(req, res, next) {
+  const token = readToken(req);
+  if (!token) return res.status(401).json({ error: 'অননুমোদিত — লগইন করুন।' });
+
+  let payload;
   try {
-    const bearer = req.headers.authorization?.startsWith('Bearer ')
-      ? req.headers.authorization.slice(7)
-      : null;
-    const token = req.cookies?.fbd_admin || bearer;
-    if (!token) return res.status(401).json({ error: 'অননুমোদিত — লগইন করুন।' });
+    payload = verifyToken(token);
+  } catch {
+    return res.status(401).json({ error: 'সেশন মেয়াদোত্তীর্ণ — আবার লগইন করুন।' });
+  }
 
-    const payload = verifyToken(token);
-    const admin = await Admin.findById(payload.sub);
-    if (!admin || !admin.active) {
-      return res.status(401).json({ error: 'অ্যাকাউন্ট নিষ্ক্রিয় বা অবৈধ।' });
-    }
-
-    req.admin = admin;
-    next();
+  let admin;
+  try {
+    admin = await Admin.findById(payload.sub);
   } catch (err) {
+    // Database problem, not an auth problem: don't log the admin out —
+    // let the error handler answer 503 with the reason.
+    return next(err);
+  }
+  if (!admin || !admin.active) {
+    return res.status(401).json({ error: 'অ্যাকাউন্ট নিষ্ক্রিয় বা অবৈধ।' });
+  }
+
+  req.admin = admin;
+  next();
+}
+
+/**
+ * Token-only check (no database lookup) for the System Status endpoints, so
+ * admins can still see what's wrong while the database is down.
+ */
+export function requireAdminToken(req, res, next) {
+  const token = readToken(req);
+  try {
+    const payload = verifyToken(token || '');
+    req.adminClaims = { id: payload.sub, role: payload.role, name: payload.name };
+    next();
+  } catch {
     return res.status(401).json({ error: 'সেশন মেয়াদোত্তীর্ণ — আবার লগইন করুন।' });
   }
 }

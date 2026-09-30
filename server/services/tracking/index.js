@@ -4,6 +4,7 @@ import { getTrackingConfig } from './config.js';
 import { sendFacebookEvent } from './facebook.capi.js';
 import { sendGoogleEvent } from './google.mp.js';
 import { sendTikTokEvent } from './tiktok.events.js';
+import { reportError } from '../systemErrors.js';
 import {
   buildFacebookUserData,
   buildTikTokUserData,
@@ -89,7 +90,7 @@ export async function runTrackingJob(job) {
     response: result.response ?? null,
     error: result.error || '',
     attempts,
-  }).catch((e) => console.error('[tracking] event_log write failed:', e.message));
+  }).catch((e) => reportError('tracking:event-log', e));
 
   return result;
 }

@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { requireAdmin, requireRole } from '../middlewares/auth.js';
+import { requireAdmin, requireAdminToken, requireRole } from '../middlewares/auth.js';
+import { getHealth } from '../controllers/system.controller.js';
 import {
   login,
   logout,
@@ -142,6 +143,9 @@ router.delete('/users/:id', requireAdmin, requireRole('admin'), deleteUser);
 
 // ── Image upload ─────────────────────────────────────
 router.post('/upload', requireAdmin, requireRole('admin'), handleUpload);
+
+// ── System status (works even while the DB is down) ──
+router.get('/system/health', requireAdminToken, getHealth);
 
 // ── Tracking ─────────────────────────────────────────
 router.get('/tracking', requireAdmin, getTracking);

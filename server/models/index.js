@@ -9,3 +9,4 @@ export { Setting } from './Setting.js';
 export { Admin, ADMIN_ROLES } from './Admin.js';
 export { Counter } from './Counter.js';
 export { DailyStat } from './DailyStat.js';
+export { SystemError } from './SystemError.js';

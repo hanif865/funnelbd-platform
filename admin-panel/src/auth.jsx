@@ -3,6 +3,18 @@ import { api, setToken, getToken } from './api.js';
 
 const AuthContext = createContext(null);
 
+/** Decode (not verify) the JWT payload; the server still verifies every call. */
+function readTokenClaims(token) {
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+    const claims = JSON.parse(json);
+    return claims.exp * 1000 > Date.now() ? claims : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +27,14 @@ export function AuthProvider({ children }) {
     }
     api('/me')
       .then((data) => setAdmin(data.admin))
-      .catch(() => setToken(''))
+      .catch((err) => {
+        if (err.status === 401) return setToken('');
+        // Server/DB trouble (503, network) — not a bad session. Stay logged in
+        // from the token's claims so the panel can show what's wrong.
+        const claims = readTokenClaims(getToken());
+        if (claims) setAdmin({ _id: claims.sub, name: claims.name, role: claims.role, degraded: true });
+        else setToken('');
+      })
       .finally(() => setLoading(false));
   }, []);
 
