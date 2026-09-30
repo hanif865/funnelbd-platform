@@ -90,7 +90,7 @@ async function connectWithRetry(delayMs = 15000) {
   }
 }
 
-async function start() {
+export async function start() {
   watchDbConnection();
   await connectWithRetry();
   const app = createApp();
@@ -101,7 +101,9 @@ async function start() {
   startFollowUpSweep();
 }
 
-// Only auto-start when run directly (not when imported by tests/worker).
+// Auto-start when run directly (`node server/app.js`). Process managers like
+// PM2 load the file through their own wrapper, so they use server/web.js,
+// which calls start() unconditionally.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   start().catch((err) => {
     console.error('[web] failed to start:', err);

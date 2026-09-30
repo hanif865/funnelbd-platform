@@ -10,7 +10,7 @@
     "dev": "node --watch server/app.js",
     "dev:mem": "node server/scripts/dev-mem.js",
     "db:start": "node server/scripts/db-local.js",
-    "start": "node server/app.js",
+    "start": "node server/web.js",
     "worker": "node server/worker.js",
     "worker:dev": "node --watch server/worker.js",
     "seed": "node server/scripts/seed.js",

@@ -4,7 +4,7 @@ module.exports = {
   apps: [
     {
       name: 'funnelbd-web',
-      script: 'server/app.js',
+      script: 'server/web.js',
       instances: 1,
       exec_mode: 'fork',
       env: { NODE_ENV: 'production' },
