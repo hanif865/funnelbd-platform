@@ -59,8 +59,24 @@ import {
 } from '../controllers/settings.controller.js';
 import { handleUpload } from '../controllers/upload.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
+import { invalidateCatalogCache } from '../services/catalog.cache.js';
+import { invalidateSettingsCache } from '../services/settings.service.js';
 
 const router = Router();
+
+// Any successful admin write may change catalog/settings → drop the in-memory
+// caches so the landing page reflects edits immediately.
+router.use((req, res, next) => {
+  if (req.method !== 'GET') {
+    res.on('finish', () => {
+      if (res.statusCode < 400) {
+        invalidateCatalogCache();
+        invalidateSettingsCache();
+      }
+    });
+  }
+  next();
+});
 
 // ── Auth ─────────────────────────────────────────────
 router.post('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'অনেকবার ভুল চেষ্টা — ১৫ মিনিট পর আবার চেষ্টা করুন।' }), login);

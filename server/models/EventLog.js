@@ -22,7 +22,12 @@ const eventLogSchema = new mongoose.Schema(
   { timestamps: true, collection: 'event_logs' }
 );
 
-eventLogSchema.index({ createdAt: -1 });
+// TTL: MongoDB auto-deletes logs older than 30 days. Events were already sent
+// to the ad platforms; these rows are only for debugging, and without expiry
+// they would eventually fill the Atlas free tier (512MB hard limit) and block
+// new orders. Also serves the newest-first sort.
+export const EVENT_LOG_TTL_DAYS = 30;
+eventLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: EVENT_LOG_TTL_DAYS * 24 * 60 * 60 });
 eventLogSchema.index({ platform: 1, status: 1 });
 
 export const EventLog = mongoose.model('EventLog', eventLogSchema);

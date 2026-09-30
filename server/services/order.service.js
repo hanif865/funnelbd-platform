@@ -1,12 +1,7 @@
 import { nanoid } from 'nanoid';
-import {
-  Offer,
-  DeliveryZone,
-  FormField,
-  Order,
-  Counter,
-} from '../models/index.js';
+import { Order, Counter } from '../models/index.js';
 import { getSettings } from './settings.service.js';
+import { getCatalog, findActiveOffer, findActiveZone } from './catalog.cache.js';
 import { normalizePhone, isValidBDPhone } from '../utils/phone.js';
 
 /**
@@ -49,10 +44,10 @@ export function computeDeliveryCharge(zoneCharge, subtotal, freeDelivery) {
  * stepper multiplies that card. subtotal = offer.price × quantity.
  */
 export async function calculatePricing({ offerId, quantity, deliveryZoneId, discount = 0 }) {
-  const offer = await Offer.findOne({ _id: offerId, active: true });
+  const offer = await findActiveOffer(offerId);
   if (!offer) throw new OrderValidationError('নির্বাচিত অফারটি এখন আর নেই।', { offerId: 'invalid' });
 
-  const zone = await DeliveryZone.findOne({ _id: deliveryZoneId, active: true });
+  const zone = await findActiveZone(deliveryZoneId);
   if (!zone) {
     throw new OrderValidationError('ডেলিভারি এলাকা সঠিক নয়।', { deliveryZoneId: 'invalid' });
   }
@@ -74,7 +69,7 @@ export async function calculatePricing({ offerId, quantity, deliveryZoneId, disc
  * (customFields). Enforces required + phone format server-side.
  */
 export async function validateFields(fields = {}) {
-  const defs = await FormField.find({ active: true }).lean();
+  const { fields: defs } = await getCatalog();
   const errors = {};
   const customer = {};
   const customFields = {};

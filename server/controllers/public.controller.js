@@ -1,13 +1,7 @@
 import mongoose from 'mongoose';
-import {
-  Product,
-  Offer,
-  FormField,
-  DeliveryZone,
-  IncompleteOrder,
-  DailyStat,
-} from '../models/index.js';
+import { IncompleteOrder, DailyStat } from '../models/index.js';
 import { getSettings } from '../services/settings.service.js';
+import { getCatalog } from '../services/catalog.cache.js';
 import {
   createOrder,
   OrderValidationError,
@@ -31,21 +25,17 @@ const EXIT_DISCOUNT = 20;
  */
 export async function renderLanding(req, res, next) {
   try {
-    const product = await Product.findOne({ active: true }).sort({ createdAt: 1 }).lean();
+    const [{ product, offers, fields, zones }, settings, trackingCfg] = await Promise.all([
+      getCatalog(),
+      getSettings(['storeInfo', 'freeDelivery']),
+      getTrackingConfig(),
+    ]);
     if (!product) {
       return res.status(503).send('কোনো প্রোডাক্ট কনফিগার করা হয়নি। অ্যাডমিন প্যানেল থেকে যোগ করুন।');
     }
 
     // Traffic counter for the dashboard conversion rate (fire-and-forget).
     DailyStat.track(req.isNewSession).catch(() => {});
-
-    const [offers, fields, zones, settings, trackingCfg] = await Promise.all([
-      Offer.find({ active: true }).sort({ order: 1 }).lean(),
-      FormField.find({ active: true }).sort({ order: 1 }).lean(),
-      DeliveryZone.find({ active: true }).sort({ order: 1 }).lean(),
-      getSettings(['storeInfo', 'freeDelivery']),
-      getTrackingConfig(),
-    ]);
 
     const defaultOffer = offers.find((o) => o.isDefault) || offers[0] || null;
     const defaultZone = zones.find((z) => z.isDefault) || zones[0] || null;
