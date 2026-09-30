@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { IncompleteOrder, DailyStat } from '../models/index.js';
 import { getSettings } from '../services/settings.service.js';
 import { getCatalog } from '../services/catalog.cache.js';
+import { storePhoneLinks } from '../services/storeInfo.js';
 import {
   createOrder,
   OrderValidationError,
@@ -67,6 +68,7 @@ export async function renderLanding(req, res, next) {
       fields,
       zones,
       settings,
+      storePhones: storePhoneLinks(settings.storeInfo),
       // Only public pixel ids reach the browser — never tokens/secrets.
       tracking: toPublicConfig(trackingCfg),
       defaultOfferId: defaultOffer ? String(defaultOffer._id) : '',

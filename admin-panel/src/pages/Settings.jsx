@@ -20,6 +20,38 @@ export default function Settings() {
   );
 }
 
+// ─── Store helpline numbers (each gets its own call/WhatsApp button) ──
+const MAX_PHONES = 5;
+function StorePhones({ phones, onChange }) {
+  const set = (i, patch) => onChange(phones.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  const remove = (i) => onChange(phones.filter((_, j) => j !== i));
+  const move = (i, d) => {
+    const next = [...phones];
+    [next[i], next[i + d]] = [next[i + d], next[i]];
+    onChange(next);
+  };
+  return (
+    <div className="fld">
+      <label>হেল্পলাইন নম্বর <span className="muted">(প্রতিটা নম্বরে ল্যান্ডিং পেজে আলাদা কল বাটন; প্রথমটা SMS-এর {'{{storePhone}}'})</span></label>
+      {phones.map((p, i) => (
+        <div key={i} className="phone-row">
+          <input placeholder="01XXXXXXXXX" value={p.number} onChange={(e) => set(i, { number: e.target.value })} />
+          <input placeholder="লেবেল (ঐচ্ছিক) — যেমন: অর্ডার করতে" value={p.label} onChange={(e) => set(i, { label: e.target.value })} />
+          <label className="cbx"><input type="checkbox" checked={!!p.whatsapp} onChange={(e) => set(i, { whatsapp: e.target.checked })} /> WhatsApp</label>
+          <button type="button" className="btn-ghost sm" disabled={i === 0} onClick={() => move(i, -1)} title="উপরে">↑</button>
+          <button type="button" className="btn-ghost sm" disabled={i === phones.length - 1} onClick={() => move(i, 1)} title="নিচে">↓</button>
+          <button type="button" className="btn-ghost sm danger" onClick={() => remove(i)}>মুছুন</button>
+        </div>
+      ))}
+      {phones.length < MAX_PHONES && (
+        <button type="button" className="btn-outline" style={{ marginTop: 6 }} onClick={() => onChange([...phones, { number: '', label: '', whatsapp: false }])}>
+          + নম্বর যোগ করুন
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── General ─────────────────────────────────────────────
 function GeneralTab() {
   const [s, setS] = useState(null);
@@ -49,7 +81,7 @@ function GeneralTab() {
       </div>
       <div className="card">
         <h3>স্টোর তথ্য</h3>
-        <div className="fld"><label>ফোন</label><input value={s.storeInfo.phone} onChange={(e) => upd('storeInfo', { phone: e.target.value })} /></div>
+        <StorePhones phones={s.storeInfo.phones || []} onChange={(phones) => upd('storeInfo', { phones })} />
         <div className="fld"><label>ঠিকানা</label><input value={s.storeInfo.address} onChange={(e) => upd('storeInfo', { address: e.target.value })} /></div>
       </div>
       <div className="card">

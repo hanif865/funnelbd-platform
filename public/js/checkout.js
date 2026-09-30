@@ -547,6 +547,28 @@
     } catch (e) {}
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  // YouTube click-to-play: swap the thumbnail for the real player on tap.
+  // referrerpolicy is required — YouTube rejects embeds without a Referer (Error 153).
+  function wireVideoFacades() {
+    document.querySelectorAll('.yt-facade[data-yt]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube.com/embed/' + encodeURIComponent(btn.getAttribute('data-yt')) + '?rel=0&autoplay=1&playsinline=1';
+        iframe.title = 'Product Video';
+        iframe.setAttribute('frameborder', '0');
+        iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+        iframe.setAttribute('allowfullscreen', '');
+        btn.replaceWith(iframe);
+      });
+    });
+  }
+
+  function boot() {
+    init();
+    wireVideoFacades();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

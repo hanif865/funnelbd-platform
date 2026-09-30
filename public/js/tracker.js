@@ -100,12 +100,45 @@
   window.fbdGaClientId = gaClientId;
 
   // ── 3. Load pixel base libraries (only enabled platforms) ──
+  // Third-party pixel SCRIPTS are the heaviest thing on the page (~250KB and
+  // ~600ms of main-thread work for Facebook alone), so they are downloaded only
+  // after the page is usable: on the visitor's first interaction, or ~3.5s after
+  // load — whichever comes first. The fbq/ttq/gtag stubs exist immediately, so
+  // every event fired before that is queued and sent once the script arrives
+  // (same event ids → dedup with the server-side mirror still works). Visitors
+  // who leave earlier are still counted via the server-side PageView.
+  var pendingScripts = [];
+  var thirdPartyReleased = false;
+  function injectScript(src) {
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = src;
+    document.head.appendChild(s);
+  }
+  function deferScript(src) {
+    if (thirdPartyReleased) injectScript(src);
+    else pendingScripts.push(src);
+  }
+  function releaseThirdParty() {
+    if (thirdPartyReleased) return;
+    thirdPartyReleased = true;
+    pendingScripts.splice(0).forEach(injectScript);
+  }
+  (function scheduleRelease() {
+    ['pointerdown', 'touchstart', 'keydown', 'scroll', 'mousemove'].forEach(function (ev) {
+      window.addEventListener(ev, releaseThirdParty, { once: true, passive: true, capture: true });
+    });
+    function afterLoad() { setTimeout(releaseThirdParty, 3500); }
+    if (document.readyState === 'complete') afterLoad();
+    else window.addEventListener('load', afterLoad);
+  })();
+
   function loadFacebook(pixelId) {
     /* eslint-disable */
     !(function (f, b, e, v, n, t, s) {
       if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) };
       if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
-      t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+      deferScript(v);
     })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
     /* eslint-enable */
     window.fbq('init', pixelId);
@@ -123,8 +156,7 @@
         var r = 'https://analytics.tiktok.com/i18n/pixel/events.js';
         ttq._i = ttq._i || {}; ttq._i[e] = []; ttq._i[e]._u = r; ttq._t = ttq._t || {}; ttq._t[e] = +new Date();
         ttq._o = ttq._o || {}; ttq._o[e] = n || {};
-        var s = d.createElement('script'); s.type = 'text/javascript'; s.async = !0; s.src = r + '?sdkid=' + e + '&lib=' + t;
-        var a = d.getElementsByTagName('script')[0]; a.parentNode.insertBefore(s, a);
+        deferScript(r + '?sdkid=' + e + '&lib=' + t);
       };
       ttq.load(pixelId); ttq.page();
     })(window, document, 'ttq');
@@ -132,10 +164,7 @@
   }
 
   function loadGoogle(measurementId) {
-    var s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
-    document.head.appendChild(s);
+    deferScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(measurementId));
     window.dataLayer = window.dataLayer || [];
     window.gtag = function () { window.dataLayer.push(arguments); };
     window.gtag('js', new Date());

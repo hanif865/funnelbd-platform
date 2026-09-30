@@ -230,3 +230,8 @@ input:focus, textarea:focus { outline: none; border-color: var(--brand); }
 .sys-new { background: var(--brand); color: #fff; font-size: .68rem; padding: 1px 6px; border-radius: 4px; }
 .sys-hint { margin: 6px 0; font-size: .88rem; }
 .sys-tech { background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: .78rem; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0; }
+
+/* Store helpline numbers editor */
+.phone-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.phone-row input:not([type="checkbox"]) { flex: 1 1 160px; min-width: 0; }
+.phone-row .cbx { white-space: nowrap; }

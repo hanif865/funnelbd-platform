@@ -5,20 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= product.name %></title>
   <meta name="description" content="<%= (product.description || product.name).replace(/<[^>]+>/g,' ').slice(0,150) %>" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <%# Fonts + icons load without blocking first paint (text shows in system font, then swaps). %>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Baloo+Da+2:wght@500;600;700;800&display=swap" media="print" onload="this.media='all'" />
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Baloo+Da+2:wght@500;600;700;800&display=swap" rel="stylesheet" /></noscript>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'" />
-  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" /></noscript>
+  <%# Font (Hind Siliguri) is self-hosted via @font-face in landing.css — no Google
+      Fonts connections. Preload the two Bengali weights used most (body 400,
+      headings 700) so text swaps to the real font quickly. Icons are an inline
+      SVG subset in landing.css (no Font Awesome CDN). %>
+  <link rel="preload" href="/public/fonts/hind-siliguri-v14-bengali-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/public/fonts/hind-siliguri-v14-bengali-700.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/public/css/landing.css?v=<%= assetVersion %>" />
   <% if (product.images && product.images[0]) { %><link rel="preload" as="image" href="<%= product.images[0] %>" fetchpriority="high" /><% } %>
 </head>
 <body class="khaleshaat-theme">
   <%
     const storeInfo = (settings && settings.storeInfo) || {};
-    const storePhone = storeInfo.phone || '019XXXXXXXX';
     const hasImages = product.images && product.images.length;
     const c = product.content || {};
     const reviewImages = c.reviewImages || [];
@@ -257,7 +255,14 @@
             <p style="margin: 0;"><strong>সর্বমোট বিল:</strong> <strong id="tyOrderTotal" style="color: #16a34a;"></strong> (ক্যাশ অন ডেলিভারি)</p>
           </div>
           <p>আমাদের প্রতিনিধি শীঘ্রই কল করে অর্ডারটি কনফার্ম করবেন।</p>
-          <a href="tel:<%= storePhone %>" class="btn btn-call"><i class="fa-solid fa-phone"></i> সরাসরি যোগাযোগ করুন <%= storePhone %></a>
+          <% if (storePhones.length) { %>
+          <div class="phone-btns">
+            <% storePhones.forEach(function(p){ %>
+              <a href="<%= p.telHref %>" class="btn btn-call"><i class="fa-solid fa-phone"></i> <%= p.label || 'সরাসরি যোগাযোগ করুন' %> <%= p.number %></a>
+              <% if (p.waHref) { %><a href="<%= p.waHref %>" class="btn btn-whatsapp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp <%= p.number %></a><% } %>
+            <% }); %>
+          </div>
+          <% } %>
         </div>
 
       </div>
@@ -372,9 +377,16 @@
         <a class="elementor-button btn-green js-scroll-checkout" href="#checkout">
           <i class="fa-solid fa-cart-shopping"></i> <%= c.buttonText || 'এখনই অর্ডার করুন' %>
         </a>
-        <a class="elementor-button btn-call" href="tel:<%= storePhone %>">
-          <i class="fa-solid fa-phone-volume"></i> কল করুন <%= storePhone %>
-        </a>
+        <% storePhones.forEach(function(p){ %>
+          <a class="elementor-button btn-call" href="<%= p.telHref %>">
+            <i class="fa-solid fa-phone-volume"></i> <%= p.label || 'কল করুন' %> <%= p.number %>
+          </a>
+          <% if (p.waHref) { %>
+          <a class="elementor-button btn-whatsapp" href="<%= p.waHref %>" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp <%= p.number %>
+          </a>
+          <% } %>
+        <% }); %>
       </div>
 
     </div>
@@ -385,14 +397,19 @@
      // Pull the 11-char video id out of any YouTube link shape (watch?v=,
      // youtu.be/, shorts/, embed/, live/ — with or without ?si=/&t= extras).
      var ytMatch = (c.videoUrl || '').match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-     var embedUrl = ytMatch ? 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0' : '';
+     var ytId = ytMatch ? ytMatch[1] : '';
   %>
-  <% if (embedUrl) { %>
+  <% if (ytId) { %>
     <section class="fk-video-section" data-section="product_video">
       <div class="fk-container">
         <div class="fk-video-wrap shine-container">
-          <%# referrerpolicy: YouTube refuses embeds without a Referer (Error 153). loading=lazy keeps the ~1MB player off the critical path. %>
-          <iframe src="<%= embedUrl %>" title="Product Video" frameborder="0" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+          <%# Click-to-play facade: only a ~20KB thumbnail loads with the page; the ~1MB
+              YouTube player loads on tap (checkout.js swaps in the iframe with
+              referrerpolicy set — YouTube refuses embeds without a Referer, Error 153). %>
+          <button type="button" class="yt-facade" data-yt="<%= ytId %>" aria-label="ভিডিও চালু করুন">
+            <img src="https://i.ytimg.com/vi/<%= ytId %>/hqdefault.jpg" alt="প্রোডাক্ট ভিডিও" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="yt-play" aria-hidden="true"></span>
+          </button>
         </div>
       </div>
     </section>
@@ -470,7 +487,11 @@
   <!-- ── 9. FOOTER ── -->
   <footer class="fk-footer" data-section="footer">
     <div class="fk-container fk-footer-inner">
-      <p class="fk-footer-phone">📞 হেল্পলাইন: <strong><%= storePhone %></strong></p>
+      <% if (storePhones.length) { %>
+      <p class="fk-footer-phone">📞 হেল্পলাইন:
+        <% storePhones.forEach(function(p, i){ %><%= i ? ' · ' : '' %><a href="<%= p.telHref %>"><strong><%= p.number %></strong></a><%= p.label ? ' (' + p.label + ')' : '' %><% }); %>
+      </p>
+      <% } %>
       <p class="fk-footer-addr"><%= storeInfo.address || 'ঢাকা, বাংলাদেশ' %></p>
       <p class="fk-footer-copy">© <%= new Date().getFullYear() %> <%= product.name %> · সর্বস্বত্ব সংরক্ষিত</p>
     </div>

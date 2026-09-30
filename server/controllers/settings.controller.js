@@ -1,6 +1,7 @@
 import { getSettings, setSetting } from '../services/settings.service.js';
 import { getSmsConfig, SMS_DEFAULTS } from '../services/sms.service.js';
 import { getCourierConfig, saveCourierConfig, COURIER_DEFAULTS } from '../services/courier.service.js';
+import { normalizeStoreInfo } from '../services/storeInfo.js';
 
 const COOLDOWN_DEFAULT = {
   enabled: true,
@@ -8,7 +9,6 @@ const COOLDOWN_DEFAULT = {
   message: 'আপনার অর্ডারটি আমরা ইতিমধ্যে পেয়েছি! আমাদের টিম শীঘ্রই যোগাযোগ করবে।',
 };
 const FREE_DELIVERY_DEFAULT = { enabled: false, threshold: 0, allFree: false };
-const STORE_DEFAULT = { phone: '', address: '' };
 
 function maskKey(k) {
   if (!k) return '';
@@ -23,7 +23,7 @@ export async function getGeneralSettings(req, res, next) {
     res.json({
       duplicateCooldown: s.duplicateCooldown || COOLDOWN_DEFAULT,
       freeDelivery: s.freeDelivery || FREE_DELIVERY_DEFAULT,
-      storeInfo: s.storeInfo || STORE_DEFAULT,
+      storeInfo: normalizeStoreInfo(s.storeInfo),
       sms: { ...sms, apiKey: maskKey(sms.apiKey), apiKeySet: !!sms.apiKey },
     });
   } catch (err) {
@@ -54,10 +54,7 @@ export async function updateGeneralSettings(req, res, next) {
       });
     }
     if (b.storeInfo) {
-      await setSetting('storeInfo', {
-        phone: String(b.storeInfo.phone || '').trim(),
-        address: String(b.storeInfo.address || '').trim(),
-      });
+      await setSetting('storeInfo', normalizeStoreInfo(b.storeInfo));
     }
     if (b.sms) {
       const cur = await getSmsConfig();
