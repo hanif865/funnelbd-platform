@@ -1,0 +1,16 @@
+node_modules/
+admin-panel/node_modules/
+admin-panel/dist/
+.env
+.env.local
+*.log
+npm-debug.log*
+public/uploads/*
+!public/uploads/.gitkeep
+# Local MongoDB (portable binaries + data dir)
+.local-mongo/
+.mongo-data/
+backups/
+
+.DS_Store
+Thumbs.db

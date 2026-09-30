@@ -1,0 +1,50 @@
+<%
+  // Renders one dynamic checkout field. `field` comes from form_fields.
+  const req = field.required ? 'required' : '';
+  const star = field.required ? '<span class="req">*</span>' : '';
+  let icon = '';
+  if (field.name === 'phone') icon = '<i class="fa-solid fa-phone fk-accent-icon"></i> ';
+  else if (field.name === 'name') icon = '<i class="fa-solid fa-user fk-accent-icon"></i> ';
+  else if (field.name === 'address') icon = '<i class="fa-solid fa-location-dot fk-accent-icon"></i> ';
+  else if (field.name === 'size' || field.name.includes('size')) icon = '<i class="fa-solid fa-ruler-horizontal fk-accent-icon"></i> ';
+  else if (field.name === 'color' || field.name.includes('color')) icon = '<i class="fa-solid fa-palette fk-secondary-icon"></i> ';
+%>
+<div class="field field-<%= field.type %> field-<%= field.name %>" data-field="<%= field.name %>">
+  <% if (field.type === 'checkbox') { %>
+    <label class="checkbox-row">
+      <input type="checkbox" name="<%= field.name %>" value="1" <%= req %> />
+      <span><%- icon %><%- field.label %><%- star %></span>
+    </label>
+  <% } else { %>
+    <label class="field-label" for="f_<%= field.name %>"><%- icon %><%- field.label %><%- star %></label>
+
+    <% if (field.type === 'textarea') { %>
+      <textarea id="f_<%= field.name %>" name="<%= field.name %>" rows="3"
+        placeholder="<%= field.placeholder || '' %>" <%= req %>></textarea>
+
+    <% } else if (field.type === 'select') { %>
+      <select id="f_<%= field.name %>" name="<%= field.name %>" <%= req %> class="wcf-attr-select">
+        <option value="">-- <%= field.label %> নির্বাচন করুন --</option>
+        <% (field.options || []).forEach(function(opt){ %>
+          <option value="<%= opt %>"><%= opt %></option>
+        <% }); %>
+      </select>
+
+    <% } else if (field.type === 'radio') { %>
+      <div class="radio-group">
+        <% (field.options || []).forEach(function(opt, i){ %>
+          <label class="radio-pill">
+            <input type="radio" name="<%= field.name %>" value="<%= opt %>" <%= (i===0 && field.required) ? 'required' : '' %> />
+            <span><%= opt %></span>
+          </label>
+        <% }); %>
+      </div>
+
+    <% } else { %>
+      <input id="f_<%= field.name %>" type="<%= field.type === 'number' ? 'number' : (field.name === 'phone' ? 'tel' : 'text') %>"
+        name="<%= field.name %>" placeholder="<%= field.placeholder || '' %>"
+        <%= field.name === 'phone' ? 'inputmode="numeric" maxlength="11"' : '' %> <%= req %> />
+    <% } %>
+  <% } %>
+  <p class="field-error" data-error-for="<%= field.name %>"></p>
+</div>
