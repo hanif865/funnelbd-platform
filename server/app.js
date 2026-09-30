@@ -40,9 +40,20 @@ export function createApp() {
   app.set('views', path.join(__dirname, 'views'));
   app.locals.baseUrl = config.baseUrl;
   // Cache-busting token for landing css/js (?v=…): changes only when their
-  // content changes, so browsers/Cloudflare (7-day cache) pick up new code
-  // right after a deploy.
+  // content changes, so browsers/Cloudflare pick up new code right after a deploy.
   app.locals.assetVersion = assetVersion();
+  // In production, inline landing.css into the page (read once at boot) so the
+  // stylesheet is not a render-blocking request — it's the main blocker on the
+  // landing page. In dev we keep the external <link> for easy editing.
+  app.locals.inlineCss = config.isProd
+    ? (() => {
+        try {
+          return fs.readFileSync(path.join(ROOT, 'public', 'css', 'landing.css'), 'utf8');
+        } catch {
+          return null; // fall back to the <link> in the template
+        }
+      })()
+    : null;
 
   // Security headers. CSP is left off in Phase 1 (landing uses some inline
   // styles); it will be tightened during Phase 4 hardening.
@@ -68,8 +79,10 @@ export function createApp() {
     '/public/uploads',
     express.static(path.join(ROOT, 'public', 'uploads'), { maxAge: config.isProd ? '365d' : 0, immutable: config.isProd })
   );
-  // Static assets (landing css/js).
-  app.use('/public',express.static(path.join(ROOT, 'public'), { maxAge: config.isProd ? '7d' : 0 }));
+  // Static assets (landing css/js + self-hosted fonts). CSS/JS are cache-busted
+  // with ?v=<assetVersion> and font filenames are versioned, so none of these
+  // URLs ever change content — safe to cache for a year, immutable.
+  app.use('/public', express.static(path.join(ROOT, 'public'), { maxAge: config.isProd ? '365d' : 0, immutable: config.isProd }));
 
   // Health check.
   app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));

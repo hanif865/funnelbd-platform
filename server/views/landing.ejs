@@ -11,7 +11,12 @@
       SVG subset in landing.css (no Font Awesome CDN). %>
   <link rel="preload" href="/public/fonts/hind-siliguri-v14-bengali-400.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/public/fonts/hind-siliguri-v14-bengali-700.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="/public/css/landing.css?v=<%= assetVersion %>" />
+  <% if (typeof inlineCss !== 'undefined' && inlineCss) { %>
+    <%# Production: styles are inlined so the stylesheet isn't render-blocking. %>
+    <style><%- inlineCss %></style>
+  <% } else { %>
+    <link rel="stylesheet" href="/public/css/landing.css?v=<%= assetVersion %>" />
+  <% } %>
   <% if (product.images && product.images[0]) { %><link rel="preload" as="image" href="<%= product.images[0] %>" fetchpriority="high" /><% } %>
 </head>
 <body class="khaleshaat-theme">
