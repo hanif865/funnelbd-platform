@@ -26,6 +26,9 @@ export const config = {
   env: NODE_ENV,
   isProd: NODE_ENV === 'production',
   port: parseInt(process.env.PORT || '3000', 10),
+  // Loopback by default: only nginx (same machine) can reach the app, so it
+  // can't be hit directly from the internet bypassing Cloudflare/nginx.
+  host: (process.env.HOST || '127.0.0.1').trim(),
   baseUrl: (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, ''),
 
   mongoUri: required('MONGODB_URI'),

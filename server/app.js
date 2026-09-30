@@ -94,7 +94,7 @@ async function start() {
   watchDbConnection();
   await connectWithRetry();
   const app = createApp();
-  app.listen(config.port, () => {
+  app.listen(config.port, config.host, () => {
     console.log(`[web] FunnelBD running → ${config.baseUrl} (env: ${config.env})`);
   });
   // Periodic abandoned-checkout follow-up (no-op unless SMS + follow-up enabled).
