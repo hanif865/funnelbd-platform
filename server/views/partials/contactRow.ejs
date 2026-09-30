@@ -1,0 +1,24 @@
+<%# Reusable mid-page contact strip: one helpline number as a Call + WhatsApp
+    pair inside a soft card. Placed at a few points down the landing page so a
+    buyer always has help nearby, instead of every number bunched in one row.
+    Locals: phone (a storePhones entry, may be null), heading (optional). %>
+<% if (typeof phone !== 'undefined' && phone) { %>
+  <div class="fk-container">
+    <div class="contact-strip">
+      <span class="contact-strip-label">
+        <i class="fa-solid fa-phone-volume"></i>
+        <%= (typeof heading !== 'undefined' && heading) ? heading : 'যেকোনো প্রশ্নে সরাসরি কথা বলুন' %>
+      </span>
+      <div class="contact-strip-btns">
+        <a class="elementor-button btn-call" href="<%= phone.telHref %>">
+          <i class="fa-solid fa-phone-volume"></i> <%= phone.label || 'কল করুন' %> <%= phone.number %>
+        </a>
+        <% if (phone.waHref) { %>
+        <a class="elementor-button btn-whatsapp" href="<%= phone.waHref %>" target="_blank" rel="noopener">
+          <i class="fa-brands fa-whatsapp"></i> WhatsApp <%= phone.number %>
+        </a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+<% } %>

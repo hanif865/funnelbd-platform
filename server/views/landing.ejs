@@ -22,6 +22,9 @@
     const reviewImages = c.reviewImages || [];
     const firstOffer = offers[0] || {};
     const toBn = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+    // Spread helpline numbers down the page instead of bunching them all in one
+    // row: each contact spot picks a number, cycling through the list.
+    const contactAt = (i) => (storePhones.length ? storePhones[i % storePhones.length] : null);
   %>
 
   <!-- ── 1. TOP RED BANNER (Khaleshaat style) ── -->
@@ -375,21 +378,22 @@
         </div>
       <% } %>
 
-      <!-- CTA Pair -->
+      <!-- CTA Pair — order button + the primary helpline only (other numbers
+           appear further down the page so they aren't all bunched here). -->
       <div class="cta-pair-wrap">
         <a class="elementor-button btn-green js-scroll-checkout" href="#checkout">
           <i class="fa-solid fa-cart-shopping"></i> <%= c.buttonText || 'এখনই অর্ডার করুন' %>
         </a>
-        <% storePhones.forEach(function(p){ %>
-          <a class="elementor-button btn-call" href="<%= p.telHref %>">
-            <i class="fa-solid fa-phone-volume"></i> <%= p.label || 'কল করুন' %> <%= p.number %>
+        <% var heroPhone = contactAt(0); if (heroPhone) { %>
+          <a class="elementor-button btn-call" href="<%= heroPhone.telHref %>">
+            <i class="fa-solid fa-phone-volume"></i> <%= heroPhone.label || 'কল করুন' %> <%= heroPhone.number %>
           </a>
-          <% if (p.waHref) { %>
-          <a class="elementor-button btn-whatsapp" href="<%= p.waHref %>" target="_blank" rel="noopener">
-            <i class="fa-brands fa-whatsapp"></i> WhatsApp <%= p.number %>
+          <% if (heroPhone.waHref) { %>
+          <a class="elementor-button btn-whatsapp" href="<%= heroPhone.waHref %>" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp <%= heroPhone.number %>
           </a>
           <% } %>
-        <% }); %>
+        <% } %>
       </div>
 
     </div>
@@ -437,6 +441,9 @@
       </div>
     </div>
   </section>
+
+  <!-- Mid-page helpline (second number, or the only one if just one is set) -->
+  <%- include('partials/contactRow', { phone: contactAt(1), heading: 'প্রোডাক্ট নিয়ে কোনো প্রশ্ন? এখনই কল বা WhatsApp করুন' }) %>
 
   <!-- ── 6. USAGE SECTION (Khaleshaat style) ── -->
   <% if (c.usageHtml) { %>
@@ -486,6 +493,9 @@
       </div>
     </div>
   </section>
+
+  <!-- Pre-footer helpline (cycles back through the numbers) -->
+  <%- include('partials/contactRow', { phone: contactAt(2), heading: 'অর্ডার করতে সাহায্য লাগলে সরাসরি কথা বলুন' }) %>
 
   <!-- ── 9. FOOTER ── -->
   <footer class="fk-footer" data-section="footer">
