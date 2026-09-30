@@ -12,7 +12,7 @@
   <noscript><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Baloo+Da+2:wght@500;600;700;800&display=swap" rel="stylesheet" /></noscript>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'" />
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" /></noscript>
-  <link rel="stylesheet" href="/public/css/landing.css" />
+  <link rel="stylesheet" href="/public/css/landing.css?v=<%= assetVersion %>" />
   <% if (product.images && product.images[0]) { %><link rel="preload" as="image" href="<%= product.images[0] %>" fetchpriority="high" /><% } %>
 </head>
 <body class="khaleshaat-theme">
@@ -604,7 +604,7 @@
     };
     window.__TRACKING__ = <%- JSON.stringify(tracking) %>;
   </script>
-  <script src="/public/js/tracker.js" defer></script>
-  <script src="/public/js/checkout.js" defer></script>
+  <script src="/public/js/tracker.js?v=<%= assetVersion %>" defer></script>
+  <script src="/public/js/checkout.js?v=<%= assetVersion %>" defer></script>
 </body>
 </html>

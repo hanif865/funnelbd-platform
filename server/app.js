@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import { config } from './config/index.js';
@@ -19,6 +20,18 @@ import { reportError, watchDbConnection } from './services/systemErrors.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
+function assetVersion() {
+  const hash = crypto.createHash('md5');
+  for (const f of ['css/landing.css', 'js/tracker.js', 'js/checkout.js']) {
+    try {
+      hash.update(fs.readFileSync(path.join(ROOT, 'public', f)));
+    } catch {
+      /* missing file — ignore */
+    }
+  }
+  return hash.digest('hex').slice(0, 8);
+}
+
 export function createApp() {
   const app = express();
 
@@ -26,6 +39,10 @@ export function createApp() {
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
   app.locals.baseUrl = config.baseUrl;
+  // Cache-busting token for landing css/js (?v=…): changes only when their
+  // content changes, so browsers/Cloudflare (7-day cache) pick up new code
+  // right after a deploy.
+  app.locals.assetVersion = assetVersion();
 
   // Security headers. CSP is left off in Phase 1 (landing uses some inline
   // styles); it will be tightened during Phase 4 hardening.

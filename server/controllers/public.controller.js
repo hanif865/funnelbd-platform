@@ -20,6 +20,26 @@ import { reportError } from '../services/systemErrors.js';
 const EXIT_DISCOUNT = 20;
 
 /**
+ * Tiny TTL set of recently mirrored tracking event ids (single web process).
+ * Returns true if the key was already seen within the window.
+ */
+const SEEN_TTL_MS = 10 * 60 * 1000;
+const SEEN_MAX = 50000;
+const seenEvents = new Map(); // key → expiresAt (insertion-ordered)
+function seenRecently(key) {
+  const now = Date.now();
+  const exp = seenEvents.get(key);
+  if (exp && exp > now) return true;
+  seenEvents.set(key, now + SEEN_TTL_MS);
+  // Evict expired/oldest entries so memory stays bounded.
+  for (const [k, e] of seenEvents) {
+    if (e > now && seenEvents.size <= SEEN_MAX) break;
+    seenEvents.delete(k);
+  }
+  return false;
+}
+
+/**
  * Loads everything the landing page needs and renders the EJS template.
  * Product/offers/fields/zones are the admin-editable content; settings supply
  * store info and free-delivery config.
@@ -193,6 +213,9 @@ export async function trackMoment(req, res) {
     if (!['pageview', 'add_to_cart', 'initiate'].includes(moment) || !eventId) {
       return res.status(204).end();
     }
+    // Same event id twice (retries, old cached tracker.js) would reach the ad
+    // platforms as two separate server events — send each id only once.
+    if (seenRecently(`${moment}:${eventId}`)) return res.status(204).end();
 
     const c = req.cookies || {};
     const city = fields.address ? extractCity(fields.address, fields.zoneName) : (fields.city || '');

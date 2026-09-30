@@ -285,8 +285,16 @@
       });
     }
 
-    // Mirror server-side with typed customer fields for high EMQ (>8.0)
+    // Mirror server-side EXACTLY ONCE (a second server event with the same id
+    // shows up as a separate "Processed" event in Meta). Wait for the richest
+    // identifiers for high EMQ: send when the phone becomes valid, else after
+    // 15s, else when the visitor leaves — whichever comes first.
+    var initiateBeaconSent = false;
     function sendInitiateBeacon() {
+      if (initiateBeaconSent) return;
+      initiateBeaconSent = true;
+      clearTimeout(initiateTimer);
+      document.removeEventListener('input', onPhoneInput, true);
       beacon('initiate', eventId, {
         fields: {
           phone: typedField('phone'),
@@ -296,10 +304,14 @@
         custom: { value: sel.value, contentIds: contentIds, numItems: sel.qty },
       });
     }
-
-    sendInitiateBeacon();
-    // Follow-up beacon after user fills phone number to enrich server CAPI match quality
-    setTimeout(sendInitiateBeacon, 2000);
+    function onPhoneInput() {
+      var digits = String(typedField('phone') || '').replace(/\D/g, '').replace(/^88/, '');
+      if (/^01[3-9]\d{8}$/.test(digits)) sendInitiateBeacon();
+    }
+    var initiateTimer = setTimeout(sendInitiateBeacon, 15000);
+    document.addEventListener('input', onPhoneInput, true);
+    window.addEventListener('pagehide', sendInitiateBeacon);
+    onPhoneInput(); // phone may already be filled (autofill)
   }
 
   /**
