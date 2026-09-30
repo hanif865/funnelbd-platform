@@ -46,14 +46,14 @@ export async function updateIncompleteStatus(req, res, next) {
   try {
     const { status } = req.body || {};
     if (!INCOMPLETE_STATUSES.includes(status)) {
-      return res.status(400).json({ error: 'অবৈধ স্ট্যাটাস।' });
+      return res.status(400).json({ error: 'Invalid status.' });
     }
     const item = await IncompleteOrder.findByIdAndUpdate(
       req.params.id,
       { status },
       { new: true }
     );
-    if (!item) return res.status(404).json({ error: 'পাওয়া যায়নি।' });
+    if (!item) return res.status(404).json({ error: 'Not found.' });
     res.json({ ok: true, item });
   } catch (err) {
     next(err);
@@ -64,12 +64,12 @@ export async function updateIncompleteStatus(req, res, next) {
 export async function sendIncompleteFollowUp(req, res, next) {
   try {
     const item = await IncompleteOrder.findById(req.params.id);
-    if (!item) return res.status(404).json({ error: 'পাওয়া যায়নি।' });
-    if (!item.phoneValid) return res.status(400).json({ error: 'বৈধ ফোন নম্বর নেই।' });
+    if (!item) return res.status(404).json({ error: 'Not found.' });
+    if (!item.phoneValid) return res.status(400).json({ error: 'No valid phone number.' });
 
     const storeInfo = (await getSetting('storeInfo', {})) || {};
     const result = await sendFollowUpSms(item, storeInfo.phone);
-    if (result.skipped) return res.status(400).json({ error: 'SMS চালু নেই (সেটিংস দেখুন)।' });
+    if (result.skipped) return res.status(400).json({ error: 'SMS is not enabled (check Settings).' });
 
     item.followUpSentAt = new Date();
     await item.save();
@@ -88,7 +88,7 @@ export async function sendIncompleteFollowUp(req, res, next) {
 export async function convertIncomplete(req, res, next) {
   try {
     const item = await IncompleteOrder.findById(req.params.id);
-    if (!item) return res.status(404).json({ error: 'পাওয়া যায়নি।' });
+    if (!item) return res.status(404).json({ error: 'Not found.' });
 
     const { offerId, quantity = 1, deliveryZoneId, fields = {} } = req.body || {};
     const mergedFields = { ...(item.data || {}), ...fields };

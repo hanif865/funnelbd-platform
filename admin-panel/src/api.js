@@ -32,8 +32,9 @@ export async function api(path, { method = 'GET', body, params } = {}) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || 'সার্ভার ত্রুটি।');
+    const err = new Error(data.error || 'Server error.');
     err.status = res.status;
+    err.fields = data.fields; // per-field validation errors, when the API sends them
     throw err;
   }
   return data;

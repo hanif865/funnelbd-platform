@@ -22,7 +22,7 @@ export async function updateProduct(req, res, next) {
   try {
     const b = req.body || {};
     const product = await Product.findOne().sort({ createdAt: 1 });
-    if (!product) return res.status(404).json({ error: 'প্রোডাক্ট নেই।' });
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
 
     if (b.name !== undefined) product.name = String(b.name).trim();
     if (b.description !== undefined) product.description = b.description;
@@ -75,7 +75,7 @@ export async function updateOffer(req, res, next) {
   try {
     const b = req.body || {};
     const offer = await Offer.findById(req.params.id);
-    if (!offer) return res.status(404).json({ error: 'অফার নেই।' });
+    if (!offer) return res.status(404).json({ error: 'Offer not found.' });
     ['title', 'image', 'badge'].forEach((k) => { if (b[k] !== undefined) offer[k] = b[k]; });
     if (b.price !== undefined) offer.price = Number(b.price) || 0;
     if (b.comparePrice !== undefined) offer.comparePrice = b.comparePrice != null && b.comparePrice !== '' ? Number(b.comparePrice) : null;
@@ -93,7 +93,7 @@ export async function updateOffer(req, res, next) {
 export async function deleteOffer(req, res, next) {
   try {
     const count = await Offer.countDocuments();
-    if (count <= 1) return res.status(400).json({ error: 'অন্তত একটি অফার রাখতে হবে।' });
+    if (count <= 1) return res.status(400).json({ error: 'At least one offer is required.' });
     await Offer.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (err) {
@@ -114,12 +114,12 @@ export async function createField(req, res, next) {
   try {
     const b = req.body || {};
     const name = String(b.name || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (!name) return res.status(400).json({ error: 'ফিল্ড নাম (English) দিন।' });
+    if (!name) return res.status(400).json({ error: 'Enter a field name (English).' });
     if (['name', 'phone', 'address'].includes(name)) {
-      return res.status(400).json({ error: 'এই নামটি কোর ফিল্ডের জন্য সংরক্ষিত।' });
+      return res.status(400).json({ error: 'This name is reserved for a core field.' });
     }
-    if (await FormField.findOne({ name })) return res.status(400).json({ error: 'এই নামে ফিল্ড আছে।' });
-    if (!FIELD_TYPES.includes(b.type)) return res.status(400).json({ error: 'অবৈধ টাইপ।' });
+    if (await FormField.findOne({ name })) return res.status(400).json({ error: 'A field with this name already exists.' });
+    if (!FIELD_TYPES.includes(b.type)) return res.status(400).json({ error: 'Invalid type.' });
 
     const last = await FormField.findOne().sort({ order: -1 }).select('order').lean();
     const field = await FormField.create({
@@ -143,7 +143,7 @@ export async function updateField(req, res, next) {
   try {
     const b = req.body || {};
     const field = await FormField.findById(req.params.id);
-    if (!field) return res.status(404).json({ error: 'ফিল্ড নেই।' });
+    if (!field) return res.status(404).json({ error: 'Field not found.' });
 
     // Core fields: only label + placeholder are editable (name/type/required
     // stay fixed because order + tracking depend on them).
@@ -165,8 +165,8 @@ export async function updateField(req, res, next) {
 export async function deleteField(req, res, next) {
   try {
     const field = await FormField.findById(req.params.id);
-    if (!field) return res.status(404).json({ error: 'ফিল্ড নেই।' });
-    if (field.isCore) return res.status(400).json({ error: 'কোর ফিল্ড ডিলিট করা যাবে না।' });
+    if (!field) return res.status(404).json({ error: 'Field not found.' });
+    if (field.isCore) return res.status(400).json({ error: 'Core fields cannot be deleted.' });
     await field.deleteOne();
     res.json({ ok: true });
   } catch (err) {
@@ -216,7 +216,7 @@ export async function updateZone(req, res, next) {
   try {
     const b = req.body || {};
     const zone = await DeliveryZone.findById(req.params.id);
-    if (!zone) return res.status(404).json({ error: 'জোন নেই।' });
+    if (!zone) return res.status(404).json({ error: 'Zone not found.' });
     if (b.name !== undefined) zone.name = String(b.name).trim();
     if (b.charge !== undefined) zone.charge = Number(b.charge) || 0;
     if (b.active !== undefined) zone.active = !!b.active;
@@ -232,7 +232,7 @@ export async function updateZone(req, res, next) {
 export async function deleteZone(req, res, next) {
   try {
     const count = await DeliveryZone.countDocuments();
-    if (count <= 1) return res.status(400).json({ error: 'অন্তত একটি জোন রাখতে হবে।' });
+    if (count <= 1) return res.status(400).json({ error: 'At least one zone is required.' });
     await DeliveryZone.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (err) {

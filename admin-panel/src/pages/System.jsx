@@ -3,21 +3,21 @@ import { api } from '../api.js';
 import { getSeenAt, markErrorsSeen, isRecoveredConnectionError } from '../components/SystemHealth.jsx';
 
 const DB_STATE = {
-  connected: { label: 'সংযুক্ত', cls: 'ok' },
-  connecting: { label: 'সংযোগ হচ্ছে…', cls: 'warning' },
-  disconnected: { label: 'সংযোগ নেই', cls: 'critical' },
+  connected: { label: 'Connected', cls: 'ok' },
+  connecting: { label: 'Connecting…', cls: 'warning' },
+  disconnected: { label: 'Disconnected', cls: 'critical' },
 };
 const SEVERITY = {
-  critical: { label: 'জরুরি', cls: 'critical' },
-  error: { label: 'ত্রুটি', cls: 'error' },
-  warning: { label: 'সতর্কতা', cls: 'warning' },
+  critical: { label: 'Critical', cls: 'critical' },
+  error: { label: 'Error', cls: 'error' },
+  warning: { label: 'Warning', cls: 'warning' },
 };
 
-const fmt = (d) => (d ? new Date(d).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
+const fmt = (d) => (d ? new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '—');
 
 /**
  * System Status: database connection, storage usage and recent server/DB
- * errors in plain Bangla with what to do. Works while the DB is down (the
+ * errors in plain English with what to do. Works while the DB is down (the
  * health endpoint needs no database).
  */
 export default function System() {
@@ -31,7 +31,7 @@ export default function System() {
       setData(await api('/system/health'));
       setErr('');
     } catch (e) {
-      setErr(e.status ? e.message : 'সার্ভারে পৌঁছানো যাচ্ছে না।');
+      setErr(e.status ? e.message : 'Cannot reach the server.');
     }
   }
   useEffect(() => {
@@ -51,10 +51,10 @@ export default function System() {
   return (
     <div>
       <div className="page-head">
-        <h1>সিস্টেম স্ট্যাটাস</h1>
+        <h1>System status</h1>
         <div className="head-tools">
-          <button className="btn-ghost" onClick={load}>রিফ্রেশ</button>
-          {errors.length > 0 && <button className="btn-outline" onClick={markSeen}>সব দেখা হয়েছে</button>}
+          <button className="btn-ghost" onClick={load}>Refresh</button>
+          {errors.length > 0 && <button className="btn-outline" onClick={markSeen}>Mark all seen</button>}
         </div>
       </div>
 
@@ -62,14 +62,14 @@ export default function System() {
 
       <div className="stat-grid">
         <div className="stat-card">
-          <div className="stat-label">ডেটাবেস সংযোগ</div>
+          <div className="stat-label">Database connection</div>
           <div className={'stat-value sys-' + dbInfo.cls}>{dbInfo.label}</div>
           <div className="stat-sub">
-            {db ? `${db.state === 'connected' ? 'চালু আছে' : 'বন্ধ আছে'} ${fmt(db.since)} থেকে` : '—'}
+            {db ? `${db.state === 'connected' ? 'Up' : 'Down'} since ${fmt(db.since)}` : '—'}
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">ডেটাবেস স্টোরেজ (আনুমানিক)</div>
+          <div className="stat-label">Database storage (approx.)</div>
           {storage ? (
             <>
               <div className={'stat-value ' + (storage.percent >= 90 ? 'sys-critical' : storage.percent >= 80 ? 'sys-warning' : '')}>
@@ -81,20 +81,20 @@ export default function System() {
               <div className="stat-sub">{storage.usedMb}MB / {storage.limitMb}MB</div>
             </>
           ) : (
-            <div className="stat-sub">জানা যাচ্ছে না (ডেটাবেস সংযোগ দরকার)</div>
+            <div className="stat-sub">Unavailable (needs a database connection)</div>
           )}
         </div>
         <div className="stat-card">
-          <div className="stat-label">গত ৭ দিনের ত্রুটি</div>
+          <div className="stat-label">Errors in the last 7 days</div>
           <div className="stat-value">{errors.length}</div>
-          <div className="stat-sub">একই ত্রুটি বারবার হলে একবারই দেখানো হয় (×সংখ্যা)</div>
+          <div className="stat-sub">Repeated identical errors are shown once (×count)</div>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>সাম্প্রতিক ত্রুটি</h3>
-        {!data && !err && <p className="muted">লোড হচ্ছে…</p>}
-        {data && errors.length === 0 && <p className="ok-text">✅ কোনো ত্রুটি নেই — সব ঠিকঠাক চলছে।</p>}
+        <h3 style={{ marginTop: 0 }}>Recent errors</h3>
+        {!data && !err && <p className="muted">Loading…</p>}
+        {data && errors.length === 0 && <p className="ok-text">✓ No errors — everything is running fine.</p>}
         <div className="sys-list">
           {errors.map((e) => {
             const sev = SEVERITY[e.severity] || SEVERITY.error;
@@ -106,24 +106,24 @@ export default function System() {
               <div key={id} className={'sys-item ' + (recovered ? 'recovered' : sev.cls) + (isNew ? ' new' : '')}>
                 <div className="sys-item-head" onClick={() => setOpen(open === id ? null : id)}>
                   {recovered
-                    ? <span className="pill sys-pill ok">✓ মিটে গেছে</span>
+                    ? <span className="pill sys-pill ok">✓ Resolved</span>
                     : <span className={'pill sys-pill ' + sev.cls}>{sev.label}</span>}
                   <strong>{e.title}</strong>
                   {e.count > 1 && <span className="muted"> ×{e.count}</span>}
-                  {isNew && <span className="sys-new">নতুন</span>}
+                  {isNew && <span className="sys-new">New</span>}
                   <span className="muted sys-time">{fmt(e.lastAt)}</span>
                 </div>
                 <div className="sys-hint">
                   {recovered
-                    ? 'ℹ️ সংযোগ সাময়িকভাবে বিচ্ছিন্ন হয়েছিল, অ্যাপ নিজেই আবার যুক্ত হয়েছে — কিছু করতে হবে না। দিনে বারবার হলে Atlas প্ল্যান আপগ্রেড বিবেচনা করুন।'
-                    : '👉 ' + e.hint}
+                    ? 'The connection dropped briefly and the app reconnected on its own — nothing to do. If it happens many times a day, consider upgrading the Atlas plan.'
+                    : '→ ' + e.hint}
                 </div>
                 {open === id ? (
                   <pre className="sys-tech">
-                    {`সময় (প্রথম): ${fmt(e.createdAt)}\nসময় (শেষ): ${fmt(e.lastAt)}\nজায়গা: ${e.source}${e.path ? ' · ' + e.path : ''} · ${e.process}\n${e.code != null ? 'কোড: ' + e.code + '\n' : ''}মেসেজ: ${e.message}`}
+                    {`First seen: ${fmt(e.createdAt)}\nLast seen: ${fmt(e.lastAt)}\nSource: ${e.source}${e.path ? ' · ' + e.path : ''} · ${e.process}\n${e.code != null ? 'Code: ' + e.code + '\n' : ''}Message: ${e.message}`}
                   </pre>
                 ) : (
-                  <button className="btn-ghost sm" onClick={() => setOpen(id)}>টেকনিক্যাল বিস্তারিত</button>
+                  <button className="btn-ghost sm" onClick={() => setOpen(id)}>Technical details</button>
                 )}
               </div>
             );

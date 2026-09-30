@@ -16,7 +16,7 @@ import System from './pages/System.jsx';
 
 function Protected({ children }) {
   const { admin, loading } = useAuth();
-  if (loading) return <div className="center-screen">লোড হচ্ছে…</div>;
+  if (loading) return <div className="center-screen muted">Loading…</div>;
   if (!admin) return <Navigate to="/login" replace />;
   return children;
 }

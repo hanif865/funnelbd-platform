@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getToken } from '../api.js';
+import { Notice } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 import ImageUploader from '../components/ImageUploader.jsx';
 
 async function uploadImage(file) {
@@ -12,7 +14,7 @@ async function uploadImage(file) {
     body: fd,
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'আপলোড ব্যর্থ');
+  if (!res.ok) throw new Error(data.error || 'Upload failed');
   return data.url;
 }
 
@@ -27,22 +29,24 @@ export default function PageEditor() {
 
   function normalize(prod) {
     if (!prod) return null;
+    // Default values below are the live, customer-facing page content, so they
+    // stay in Bangla. Only the admin editor labels around them are in English.
     return {
       ...prod,
       content: {
         brandTagline: 'অরিজিনাল পণ্যের প্রতিশ্রুতি – আপনার বিশ্বস্ত অনলাইন হাট',
         checkoutBadge: '⚡ দ্রুততম চেকআউট',
         checkoutTitle: 'অর্ডার কনফার্ম করতে নিচের ফর্মটি পূরণ করুন',
-        checkoutSubtitle: 'সঠিক তথ্য দিয়ে ফর্মটি পূরণ করুন, দ্রুততম সময়ে আপনার ঠিকানায় পণ্য পৌঁছে দেওয়া হবে।',
+        checkoutSubtitle: 'সঠিক তথ্য দিয়ে ফর্মটি পূরণ করুন, দ্রুততম সময়ে আপনার ঠিকানায় পণ্য পৌঁছে দেওয়া হবে।',
         offersTitle: 'আপনার পছন্দের প্রোডাক্ট সিলেক্ট করুন',
         buttonText: 'অর্ডার কনফার্ম করুন',
         sizeChartImage: '',
         heroBadge1: '🔥 ধামাকা অফার',
-        heroBadge2: '⭐ ১০০% অরিজিনাল প্রিমিয়াম কোয়ালিটি',
+        heroBadge2: '⭐ ১০০% অরিজিনাল প্রিমিয়াম কোয়ালিটি',
         trendingBadge: '🔥 হট ট্রেন্ডিং কালেকশন ২০২৬',
         subheadline: '',
         heroSubtext: '',
-        heroHighlight: 'ইনস্ট্যান্ট স্লিম লুক, নিয়মিত ব্যবহারেই কমবে পেটের মেদ',
+        heroHighlight: 'ইনস্ট্যান্ট স্লিম লুক, নিয়মিত ব্যবহারেই কমবে পেটের মেদ',
         videoUrl: '',
         benefitTitle: 'কেন কিনবেন?',
         usageTitle: 'কতক্ষণ ব্যবহার করবেন',
@@ -93,7 +97,7 @@ export default function PageEditor() {
           content: p.content,
         },
       });
-      setMsg('পাবলিশ হয়েছে — লাইভ পেজে চেঞ্জ চলে গেছে।');
+      setMsg('Published — the change is live on the page.');
     } catch (e) {
       setMsg(e.message);
     } finally {
@@ -101,275 +105,275 @@ export default function PageEditor() {
     }
   }
 
-  if (!p) return <p className="muted">লোড হচ্ছে…</p>;
+  if (!p) return <p className="muted">Loading…</p>;
 
   return (
     <div>
       <div className="page-head">
         <div>
-          <h1>ল্যান্ডিং পেজ ও ফানেল এডিটর</h1>
+          <h1>Landing page &amp; funnel editor</h1>
           <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.88rem' }}>
-            লাইভ ফানেলের ভিজ্যুয়াল ক্রমানুসারে প্রতিটি সেকশন সাজানো হয়েছে।
+            Each section is arranged in the visual order of the live funnel.
           </p>
         </div>
-        <a className="btn-ghost" href="/funnel-step/checkout/" target="_blank" rel="noreferrer">লাইভ পেজ ↗</a>
+        <a className="btn-ghost" href="/funnel-step/checkout/" target="_blank" rel="noreferrer">Live page <Icon name="external" size={15} /></a>
       </div>
 
-      {/* ── ১. ব্র্যান্ড ও টপ বার ── */}
+      {/* ── 1. Brand & top bar ── */}
       <div className="card">
-        <h3>১. ব্র্যান্ড ও টপ বার (Top Bar)</h3>
+        <h3>1. Brand &amp; top bar</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
-          পেজের সর্বউপরে থাকা লাল রঙের ব্যানার ও মূল প্রোডাক্ট হেডলাইন।
+          The red banner at the very top of the page and the main product headline.
         </p>
         <div className="fld">
-          <label>টপ বার টেক্সট / জরুরি ঘোষণা</label>
+          <label>Top-bar text / urgent announcement</label>
           <input
             value={p.content.brandTagline}
             onChange={(e) => setContent({ brandTagline: e.target.value })}
-            placeholder="যেমন: অরিজিনাল পণ্যের প্রতিশ্রুতি – আপনার বিশ্বস্ত অনলাইন হাট"
+            placeholder="e.g. অরিজিনাল পণ্যের প্রতিশ্রুতি – আপনার বিশ্বস্ত অনলাইন হাট"
           />
         </div>
         <div className="fld">
-          <label>মূল প্রোডাক্টের নাম (টাইটেল)</label>
+          <label>Main product name (title)</label>
           <input
             value={p.name}
             onChange={(e) => setP({ ...p, name: e.target.value })}
-            placeholder="যেমন: Sweat Slim Belt Plus (Original Imported)"
+            placeholder="e.g. Sweat Slim Belt Plus (Original Imported)"
           />
         </div>
       </div>
 
-      {/* ── ২. চেকআউট ফর্ম কনফিগারেশন (পেজের শীর্ষে) ── */}
+      {/* ── 2. Checkout form configuration (top of page) ── */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-          <h3 style={{ margin: 0 }}>২. চেকআউট ফর্ম কনফিগারেশন (পেজের শীর্ষে প্রদর্শিত)</h3>
+          <h3 style={{ margin: 0 }}>2. Checkout form configuration (shown at the top of the page)</h3>
           <span style={{ fontSize: '0.78rem', background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: 999, fontWeight: 700 }}>
             Khaleshaat Top Checkout
           </span>
         </div>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
-          ল্যান্ডিং পেজের শীর্ষে থাকা মূল চেকআউট ফর্মের টাইটেল, অফার হেডার ও বাটন টেক্সট এখান থেকে পরিবর্তন করুন।
+          Edit the title, offer header and button text of the main checkout form at the top of the landing page here.
         </p>
 
         <div className="two-col">
           <div className="fld">
-            <label>চেকআউট ব্যাজ টেক্সট</label>
+            <label>Checkout badge text</label>
             <input
               value={p.content.checkoutBadge}
               onChange={(e) => setContent({ checkoutBadge: e.target.value })}
-              placeholder="যেমন: ⚡ দ্রুততম চেকআউট"
+              placeholder="e.g. ⚡ দ্রুততম চেকআউট"
             />
           </div>
           <div className="fld">
-            <label>অর্ডার বাটন টেক্সট</label>
+            <label>Order button text</label>
             <input
               value={p.content.buttonText}
               onChange={(e) => setContent({ buttonText: e.target.value })}
-              placeholder="যেমন: অর্ডার কনফার্ম করুন"
+              placeholder="e.g. অর্ডার কনফার্ম করুন"
             />
           </div>
         </div>
 
         <div className="fld">
-          <label>চেকআউট মূল শিরোনাম (ফর্ম হেডার)</label>
+          <label>Checkout main heading (form header)</label>
           <input
             value={p.content.checkoutTitle}
             onChange={(e) => setContent({ checkoutTitle: e.target.value })}
-            placeholder="যেমন: অর্ডার কনফার্ম করতে নিচের ফর্মটি পূরণ করুন"
+            placeholder="e.g. অর্ডার কনফার্ম করতে নিচের ফর্মটি পূরণ করুন"
           />
         </div>
 
         <div className="fld">
-          <label>চেকআউট সাব-শিরোনাম (ডেস্কটপ)</label>
+          <label>Checkout sub-heading (desktop)</label>
           <input
             value={p.content.checkoutSubtitle}
             onChange={(e) => setContent({ checkoutSubtitle: e.target.value })}
-            placeholder="যেমন: সঠিক তথ্য দিয়ে ফর্মটি পূরণ করুন, দ্রুততম সময়ে আপনার ঠিকানায় পণ্য পৌঁছে দেওয়া হবে।"
+            placeholder="e.g. সঠিক তথ্য দিয়ে ফর্মটি পূরণ করুন, দ্রুততম সময়ে আপনার ঠিকানায় পণ্য পৌঁছে দেওয়া হবে।"
           />
         </div>
 
         <div className="fld">
-          <label>অফার / প্যাকেজ সিলেকশন টাইটেল</label>
+          <label>Offer / package selection title</label>
           <input
             value={p.content.offersTitle}
             onChange={(e) => setContent({ offersTitle: e.target.value })}
-            placeholder="যেমন: আপনার পছন্দের প্রোডাক্ট সিলেক্ট করুন"
+            placeholder="e.g. আপনার পছন্দের প্রোডাক্ট সিলেক্ট করুন"
           />
         </div>
 
         <div className="fld">
-          <label>সাইজ চার্ট ব্যানার ছবি (ঐচ্ছিক)</label>
+          <label>Size-chart banner image (optional)</label>
           <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.84rem' }}>
-            চেকআউট ফর্মের ঠিক নিচে কাস্টমার সাইজ রেফারেন্সের জন্য প্রদর্শিত হবে।
+            Shown right below the checkout form as a size reference for customers.
           </p>
           <ImageUploader value={p.content.sizeChartImage} onChange={(url) => setContent({ sizeChartImage: url })} />
         </div>
 
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px', marginTop: 14 }}>
-          <strong style={{ fontSize: '0.88rem', display: 'block', marginBottom: 6 }}>💡 চেকআউট ফর্ম সম্পর্কিত অন্যান্য সেটিংস:</strong>
+          <strong style={{ fontSize: '0.88rem', display: 'block', marginBottom: 6 }}>Other checkout-form settings:</strong>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: '0.85rem' }}>
-            <Link to="/offers" style={{ fontWeight: 600, color: '#e63946' }}>🛍️ অফার ও প্যাকেজ প্রাইসিং এডিট করুন ↗</Link>
+            <Link to="/offers" style={{ fontWeight: 600, color: '#e63946' }}>Edit offers &amp; package pricing →</Link>
             <span style={{ color: '#cbd5e1' }}>|</span>
-            <Link to="/form-builder" style={{ fontWeight: 600, color: '#e63946' }}>📝 ফর্মের ফিল্ড (সাইজ, কালার ইত্যাদি) এডিট করুন ↗</Link>
+            <Link to="/form-builder" style={{ fontWeight: 600, color: '#e63946' }}>Edit form fields (size, colour, etc.) →</Link>
             <span style={{ color: '#cbd5e1' }}>|</span>
-            <Link to="/delivery" style={{ fontWeight: 600, color: '#e63946' }}>🚚 ডেলিভারি চার্জ নির্ধারণ করুন ↗</Link>
+            <Link to="/delivery" style={{ fontWeight: 600, color: '#e63946' }}>Set delivery charges →</Link>
           </div>
         </div>
       </div>
 
-      {/* ── ৩. প্রোডাক্ট হিরো শোকেস ও স্লাইডার ── */}
+      {/* ── 3. Product hero showcase & slider ── */}
       <div className="card">
-        <h3>৩. প্রোডাক্ট হিরো শোকেস ও গ্যালারি স্লাইডার</h3>
+        <h3>3. Product hero showcase &amp; gallery slider</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
-          চেকআউট ফর্মের নিচে থাকা বড় প্রোডাক্ট শোকেস, স্লাইডার ইমেজ, হাইলাইটস ও ব্যাজসমূহ।
+          The large product showcase below the checkout form: slider images, highlights and badges.
         </p>
 
         <div className="fld">
-          <label>গ্যালারি ছবি (স্লাইডার)</label>
+          <label>Gallery images (slider)</label>
           <ImageGrid images={p.images || []} onAdd={(f) => addImage('gallery', f)} onRemove={(i) => removeImage('gallery', i)} />
         </div>
 
         <div className="two-col">
           <div className="fld">
-            <label>স্লাইডারের উপরের ব্যাজ ১ (লাল)</label>
+            <label>Badge 1 above the slider (red)</label>
             <input
               value={p.content.heroBadge1}
               onChange={(e) => setContent({ heroBadge1: e.target.value })}
-              placeholder="যেমন: 🔥 ধামাকা অফার"
+              placeholder="e.g. 🔥 ধামাকা অফার"
             />
           </div>
           <div className="fld">
-            <label>স্লাইডারের উপরের ব্যাজ ২ (গোল্ডেন)</label>
+            <label>Badge 2 above the slider (golden)</label>
             <input
               value={p.content.heroBadge2}
               onChange={(e) => setContent({ heroBadge2: e.target.value })}
-              placeholder="যেমন: ⭐ ১০০% অরিজিনাল প্রিমিয়াম কোয়ালিটি"
+              placeholder="e.g. ⭐ ১০০% অরিজিনাল প্রিমিয়াম কোয়ালিটি"
             />
           </div>
         </div>
 
         <div className="fld">
-          <label>ট্রেন্ডিং কালেকশন ব্যাজ (শিরোনামের উপরে)</label>
+          <label>Trending collection badge (above the title)</label>
           <input
             value={p.content.trendingBadge}
             onChange={(e) => setContent({ trendingBadge: e.target.value })}
-            placeholder="যেমন: 🔥 হট ট্রেন্ডিং কালেকশন ২০২৬"
+            placeholder="e.g. 🔥 হট ট্রেন্ডিং কালেকশন ২০২৬"
           />
         </div>
 
         <div className="fld">
-          <label>বোল্ড সাব-হেডলাইন (প্রোডাক্ট টাইটেলের নিচে)</label>
+          <label>Bold sub-headline (below the product title)</label>
           <input
             value={p.content.subheadline}
             onChange={(e) => setContent({ subheadline: e.target.value })}
-            placeholder="যেমন: নারী-পুরুষ উভয়ই ব্যবহার করতে পারবেন"
+            placeholder="e.g. নারী-পুরুষ উভয়ই ব্যবহার করতে পারবেন"
           />
         </div>
 
         <div className="fld">
-          <label>কোটেশন বা সাব-টেক্সট (প্রাইস বক্সের নিচে)</label>
+          <label>Quote or sub-text (below the price box)</label>
           <input
             value={p.content.heroSubtext}
             onChange={(e) => setContent({ heroSubtext: e.target.value })}
-            placeholder="যেমন: ইনস্ট্যান্ট স্লিম লুক, নিয়মিত ব্যবহারেই কমবে পেটের মেদ"
+            placeholder="e.g. ইনস্ট্যান্ট স্লিম লুক, নিয়মিত ব্যবহারেই কমবে পেটের মেদ"
           />
         </div>
 
         <div className="fld">
-          <label>বড় হাইলাইট হেডলাইন (কল টু অ্যাকশন বাটনদ্বয়ের উপরে)</label>
+          <label>Large highlight headline (above the call-to-action buttons)</label>
           <input
             value={p.content.heroHighlight}
             onChange={(e) => setContent({ heroHighlight: e.target.value })}
-            placeholder="যেমন: ইনস্ট্যান্ট স্লিম লুক, নিয়মিত ব্যবহারেই কমবে পেটের মেদ"
+            placeholder="e.g. ইনস্ট্যান্ট স্লিম লুক, নিয়মিত ব্যবহারেই কমবে পেটের মেদ"
           />
         </div>
       </div>
 
-      {/* ── ৪. প্রোডাক্ট ভিডিও সেকশন ── */}
+      {/* ── 4. Product video section ── */}
       <div className="card">
-        <h3>৪. প্রোডাক্ট ভিডিও সেকশন (ঐচ্ছিক)</h3>
+        <h3>4. Product video section (optional)</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
-          ইউটিউব ভিডিও বা Shorts লিংক দিন। কাস্টমার লাইভ পেজে প্রোডাক্টের ডেমো ভিডিও দেখতে পাবে (খালি রাখলে ভিডিও সেকশনটি হাইড থাকবে)।
+          Add a YouTube video or Shorts link. Customers see a product demo video on the live page (leave blank to hide the video section).
         </p>
         <div className="fld">
-          <label>ইউটিউব ভিডিও / Shorts লিঙ্ক</label>
+          <label>YouTube video / Shorts link</label>
           <input
             value={p.content.videoUrl}
             onChange={(e) => setContent({ videoUrl: e.target.value })}
-            placeholder="যেমন: https://www.youtube.com/watch?v=... বা https://youtube.com/shorts/..."
+            placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtube.com/shorts/..."
           />
         </div>
       </div>
 
-      {/* ── ৫. বেনিফিট সেকশন ── */}
+      {/* ── 5. Benefits section ── */}
       <div className="card">
-        <h3>৫. বেনিফিট সেকশন (কেন কিনবেন)</h3>
+        <h3>5. Benefits section (why buy)</h3>
         <div className="fld">
-          <label>সেকশন টাইটেল</label>
+          <label>Section title</label>
           <input
             value={p.content.benefitTitle}
             onChange={(e) => setContent({ benefitTitle: e.target.value })}
-            placeholder="যেমন: কেন কিনবেন?"
+            placeholder="e.g. কেন কিনবেন?"
           />
         </div>
         <div className="fld">
-          <label>বিস্তারিত সুবিধা (HTML সমর্থিত — যেমন &lt;ul&gt;&lt;li&gt;…&lt;/li&gt;&lt;/ul&gt;)</label>
+          <label>Benefit details (HTML supported — e.g. &lt;ul&gt;&lt;li&gt;…&lt;/li&gt;&lt;/ul&gt;)</label>
           <textarea
             rows={5}
             value={p.description}
             onChange={(e) => setP({ ...p, description: e.target.value })}
-            placeholder="<ul><li>১০০% অরিজিনাল চায়না থেকে ইমপোর্ট</li><li>নিয়মিত ব্যবহারে পেটের মেদ কমাতে সহায়তা করে</li></ul>"
+            placeholder="<ul><li>১০০% অরিজিনাল চায়না থেকে ইমপোর্ট</li><li>নিয়মিত ব্যবহারে পেটের মেদ কমাতে সহায়তা করে</li></ul>"
           />
         </div>
       </div>
 
-      {/* ── ৬. ব্যবহারবিধি সেকশন ── */}
+      {/* ── 6. Usage instructions section ── */}
       <div className="card">
-        <h3>৬. ব্যবহারবিধি সেকশন (ঐচ্ছিক)</h3>
+        <h3>6. Usage instructions section (optional)</h3>
         <div className="fld">
-          <label>সেকশন টাইটেল</label>
+          <label>Section title</label>
           <input
             value={p.content.usageTitle}
             onChange={(e) => setContent({ usageTitle: e.target.value })}
-            placeholder="যেমন: কতক্ষণ ব্যবহার করবেন"
+            placeholder="e.g. কতক্ষণ ব্যবহার করবেন"
           />
         </div>
         <div className="fld">
-          <label>ব্যবহারের নিয়মাবলী (HTML — খালি রাখলে সেকশনটি হাইড থাকবে)</label>
+          <label>Usage instructions (HTML — leave blank to hide the section)</label>
           <textarea
             rows={3}
             value={p.content.usageHtml}
             onChange={(e) => setContent({ usageHtml: e.target.value })}
-            placeholder="<ul><li>প্রতিদিন ৪–৮ ঘণ্টা ব্যবহার করা ভালো।</li><li>হাঁটা, বসা, অফিস কাজ—সবকিছুতেই পরা যায়।</li></ul>"
+            placeholder="<ul><li>প্রতিদিন ৪–৮ ঘণ্টা ব্যবহার করা ভালো।</li><li>হাঁটা, বসা, অফিস কাজ—সবকিছুতেই পরা যায়।</li></ul>"
           />
         </div>
       </div>
 
-      {/* ── ৭. কালো ইনফো বার ── */}
+      {/* ── 7. Black info bar ── */}
       <div className="card">
-        <h3>৭. কালো ইনফো বার (ঐচ্ছিক)</h3>
+        <h3>7. Black info bar (optional)</h3>
         <div className="fld">
-          <label>ইনফো টেক্সট (যেমন সাইজ/কালার তথ্য — খালি রাখলে দেখাবে না)</label>
+          <label>Info text (e.g. size / colour info — leave blank to hide)</label>
           <input
             value={p.content.infoBar}
             onChange={(e) => setContent({ infoBar: e.target.value })}
-            placeholder="যেমন: ২৮ থেকে ৪৮ সাইজের (BLACK, SKIN) মোট ২টি কালার পাচ্ছেন"
+            placeholder="e.g. ২৮ থেকে ৪৮ সাইজের (BLACK, SKIN) মোট ২টি কালার পাচ্ছেন"
           />
         </div>
       </div>
 
-      {/* ── ৮. কাস্টমার রিভিউ সেকশন ── */}
+      {/* ── 8. Customer reviews section ── */}
       <div className="card">
-        <h3>৮. কাস্টমার রিভিউ সেকশন</h3>
+        <h3>8. Customer reviews section</h3>
         <div className="fld">
-          <label>সেকশন টাইটেল</label>
+          <label>Section title</label>
           <input
             value={p.content.reviewsTitle}
             onChange={(e) => setContent({ reviewsTitle: e.target.value })}
-            placeholder="যেমন: সম্মানিত গ্রাহকদের মতামত"
+            placeholder="e.g. সম্মানিত গ্রাহকদের মতামত"
           />
         </div>
-        <label>রিভিউ স্ক্রিনশট ও ছবিসমূহ</label>
+        <label>Review screenshots &amp; images</label>
         <ImageGrid
           images={p.content.reviewImages || []}
           onAdd={(f) => addImage('review', f)}
@@ -377,12 +381,12 @@ export default function PageEditor() {
         />
       </div>
 
-      {/* ── সেভ ও পাবলিশ বার ── */}
+      {/* ── Save & publish bar ── */}
       <div className="save-bar sticky-save">
         <button className="btn-primary" onClick={save} disabled={busy}>
-          {busy ? 'পাবলিশ হচ্ছে…' : 'Publish / সেভ করুন'}
+          {busy ? 'Publishing…' : 'Publish / save'}
         </button>
-        {msg && <span className="ok-text">{msg}</span>}
+        {msg && <Notice type="ok">{msg}</Notice>}
       </div>
     </div>
   );
@@ -394,11 +398,11 @@ function ImageGrid({ images, onAdd, onRemove }) {
       {images.map((src, i) => (
         <div className="img-cell" key={i}>
           <img src={src} alt="" />
-          <button className="img-remove" onClick={() => onRemove(i)}>✕</button>
+          <button className="img-remove" onClick={() => onRemove(i)}><Icon name="x" size={14} /></button>
         </div>
       ))}
       <label className="img-add">
-        + ছবি
+        <Icon name="plus" size={16} /> Image
         <input
           type="file"
           accept="image/*"

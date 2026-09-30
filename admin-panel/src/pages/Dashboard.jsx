@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { STATUS_MAP, bnDate } from '../constants.js';
+import { fmtDate, money, num } from '../constants.js';
+import { Pill, StatusPill, Empty } from '../components/ui.jsx';
 
-const bn = (n) => String(n ?? 0).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[d]);
+const orders = (n) => `${num(n)} ${Number(n) === 1 ? 'order' : 'orders'}`;
 
 function formatDwell(sec) {
-  if (!sec || sec < 60) return `${bn(Math.round(sec || 0))} সেকেণ্ড`;
+  if (!sec || sec < 60) return `${Math.round(sec || 0)}s`;
   const m = Math.floor(sec / 60);
   const s = Math.round(sec % 60);
-  return `${bn(m)} মি. ${bn(s)} সে.`;
+  return `${num(m)}m ${s}s`;
 }
 
 export default function Dashboard() {
@@ -18,37 +19,47 @@ export default function Dashboard() {
   useEffect(() => { api('/dashboard').then(setD).catch((e) => setErr(e.message)); }, []);
 
   if (err) return <p className="err">{err}</p>;
-  if (!d) return <p className="muted">লোড হচ্ছে…</p>;
+  if (!d) return <p className="muted">Loading…</p>;
   const { cards, incomplete, sources, series, recent, sectionAnalytics = [] } = d;
 
   const totalExits = sectionAnalytics.reduce((sum, s) => sum + (s.exits || 0), 0);
+  const maxExits = Math.max(0, ...sectionAnalytics.map((s) => s.exits || 0));
   const maxDwell = Math.max(1, ...sectionAnalytics.map((s) => s.dwellSeconds || 0));
 
   return (
     <div>
-      <div className="page-head"><h1>ড্যাশবোর্ড</h1></div>
+      <div className="page-head">
+        <div>
+          <h1>Dashboard</h1>
+          <p className="page-sub">Sales, conversion and where visitors drop off.</p>
+        </div>
+      </div>
 
       <div className="stat-grid">
-        <Stat label="আজ" value={bn(cards.today.orders) + ' অর্ডার'} sub={bn(cards.today.revenue) + '৳'} />
-        <Stat label="গতকাল" value={bn(cards.yesterday.orders) + ' অর্ডার'} sub={bn(cards.yesterday.revenue) + '৳'} />
-        <Stat label="৭ দিন" value={bn(cards.week.orders) + ' অর্ডার'} sub={bn(cards.week.revenue) + '৳'} />
-        <Stat label="৩০ দিন" value={bn(cards.month.orders) + ' অর্ডার'} sub={bn(cards.month.revenue) + '৳'} accent />
-        <Stat label="গড় অর্ডার (AOV)" value={bn(cards.aov) + '৳'} />
-        <Stat label="কনভার্সন রেট" value={cards.conversionRate != null ? bn(cards.conversionRate) + '%' : '—'} sub={bn(cards.visitors) + ' ভিজিটর'} />
-        <Stat label="অসম্পূর্ণ (সক্রিয়)" value={bn(incomplete.active)} sub={'রিকভারি ' + (incomplete.recoveryRate != null ? bn(incomplete.recoveryRate) + '%' : '—')} />
+        <Stat label="Today" value={money(cards.today.revenue)} sub={orders(cards.today.orders)} />
+        <Stat label="Yesterday" value={money(cards.yesterday.revenue)} sub={orders(cards.yesterday.orders)} />
+        <Stat label="Last 7 days" value={money(cards.week.revenue)} sub={orders(cards.week.orders)} />
+        <Stat label="Last 30 days" value={money(cards.month.revenue)} sub={orders(cards.month.orders)} accent />
+        <Stat label="Avg. order value" value={money(cards.aov)} sub="Last 30 days" />
+        <Stat label="Conversion rate" value={cards.conversionRate != null ? cards.conversionRate + '%' : '—'} sub={`${num(cards.visitors)} visitors`} />
+        <Stat label="Incomplete (active)" value={num(incomplete.active)} sub={'Recovery ' + (incomplete.recoveryRate != null ? incomplete.recoveryRate + '%' : '—')} />
       </div>
 
       <div className="two-col dash-lower">
         <div className="card">
-          <h3>গত ৩০ দিনের অর্ডার ও রেভিনিউ</h3>
+          <h3>Orders &amp; revenue — last 30 days</h3>
           <Chart series={series} />
         </div>
         <div className="card">
-          <h3>সোর্স ব্রেকডাউন (৩০ দিন)</h3>
-          {sources.length === 0 ? <p className="muted">ডেটা নেই।</p> : (
+          <h3>Traffic sources — last 30 days</h3>
+          {sources.length === 0 ? <Empty>No orders yet.</Empty> : (
             <table className="table mini"><tbody>
               {sources.map((s) => (
-                <tr key={s._id}><td>{s._id}</td><td>{bn(s.count)} অর্ডার</td><td>{bn(s.revenue)}৳</td></tr>
+                <tr key={s._id}>
+                  <td className="cell-strong">{s._id}</td>
+                  <td className="num">{orders(s.count)}</td>
+                  <td className="num cell-strong">{money(s.revenue)}</td>
+                </tr>
               ))}
             </tbody></table>
           )}
@@ -56,68 +67,49 @@ export default function Dashboard() {
       </div>
 
       {sectionAnalytics.length > 0 && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <div className="card">
+          <div className="card-head">
             <div>
-              <h3 style={{ margin: 0 }}>📊 সেকশন অ্যানালিটিক্স ও ড্রপ-অফ রিপোর্ট (Section Dwell & Bounce)</h3>
-              <p className="muted" style={{ margin: '4px 0 0', fontSize: '0.88rem' }}>
-                ভিজিটররা কোন সেকশনে বেশি সময় কাটিয়েছে এবং কোন সেকশন থেকে পেজ ত্যাগ (Exit) করেছে।
-              </p>
+              <h3>Landing page sections</h3>
+              <p className="page-sub">Time visitors spend in each section, and the section they were on when they left.</p>
             </div>
-            {totalExits > 0 && (
-              <span className="pill" style={{ background: '#ef4444' }}>
-                মোট ড্রপ-অফ / এক্সিট: {bn(totalExits)} জন
-              </span>
-            )}
+            {totalExits > 0 && <Pill color="#dc2626">{num(totalExits)} exits total</Pill>}
           </div>
 
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
-                  <th>সেকশন নাম</th>
-                  <th>মোট সময় (Dwell Time)</th>
-                  <th>ভিজিটর ভিউ</th>
-                  <th>পেজ ত্যাগ / ড্রপ-অফ (Exits)</th>
-                  <th>ড্রপ-অফ অনুপাত</th>
+                  <th>Section</th>
+                  <th>Time spent</th>
+                  <th className="num">Views</th>
+                  <th className="num">Exits</th>
+                  <th>Share of exits</th>
                 </tr>
               </thead>
               <tbody>
                 {sectionAnalytics.map((sec) => {
                   const exitPct = totalExits > 0 ? Math.round((sec.exits / totalExits) * 100) : 0;
-                  const isTopExit = totalExits > 0 && sec.exits > 0 && sec.exits === Math.max(...sectionAnalytics.map((s) => s.exits));
+                  const isTopExit = maxExits > 0 && sec.exits === maxExits;
                   const dwellPct = Math.round(((sec.dwellSeconds || 0) / maxDwell) * 100);
 
                   return (
                     <tr key={sec.key}>
-                      <td style={{ fontWeight: 600 }}>
-                        {sec.label}
-                        {isTopExit && (
-                          <span className="pill sm" style={{ background: '#ef4444', marginLeft: 8, fontSize: '0.68rem' }}>
-                            সর্বোচ্চ ড্রপ-অফ
-                          </span>
-                        )}
+                      <td className="cell-strong">
+                        {sec.label} {isTopExit && <Pill color="#dc2626" small>Top exit</Pill>}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ minWidth: 70 }}>{formatDwell(sec.dwellSeconds)}</span>
-                          <div style={{ width: 80, height: 6, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
-                            <div style={{ width: `${dwellPct}%`, height: '100%', background: '#3b82f6', borderRadius: 4 }} />
-                          </div>
+                        <div className="meter-cell">
+                          <span style={{ minWidth: 62 }}>{formatDwell(sec.dwellSeconds)}</span>
+                          <span className="meter"><span style={{ width: `${dwellPct}%`, background: '#3b82f6' }} /></span>
                         </div>
                       </td>
-                      <td>{bn(sec.views || 0)} বার</td>
+                      <td className="num">{num(sec.views || 0)}</td>
+                      <td className="num" style={{ color: sec.exits > 0 ? '#dc2626' : undefined, fontWeight: 600 }}>{num(sec.exits || 0)}</td>
                       <td>
-                        <strong style={{ color: sec.exits > 0 ? '#ef4444' : 'inherit' }}>
-                          {bn(sec.exits || 0)} জন
-                        </strong>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span>{bn(exitPct)}%</span>
-                          <div style={{ width: 60, height: 6, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
-                            <div style={{ width: `${exitPct}%`, height: '100%', background: exitPct > 30 ? '#ef4444' : '#f59e0b', borderRadius: 4 }} />
-                          </div>
+                        <div className="meter-cell">
+                          <span style={{ minWidth: 34 }}>{exitPct}%</span>
+                          <span className="meter"><span style={{ width: `${exitPct}%`, background: exitPct > 30 ? '#ef4444' : '#f59e0b' }} /></span>
                         </div>
                       </td>
                     </tr>
@@ -129,24 +121,26 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3>সর্বশেষ ১০ অর্ডার</h3>
+      <div className="card">
+        <div className="card-head">
+          <h3>Latest orders</h3>
+          <Link to="/orders" className="btn-ghost sm">View all</Link>
+        </div>
         <div className="table-wrap">
           <table className="table">
-            <thead><tr><th>অর্ডার</th><th>নাম</th><th>ফোন</th><th>টোটাল</th><th>স্ট্যাটাস</th><th>সময়</th></tr></thead>
+            <thead><tr><th>Order</th><th>Customer</th><th>Phone</th><th className="num">Total</th><th>Status</th><th>Placed</th></tr></thead>
             <tbody>
-              {recent.map((o) => {
-                const st = STATUS_MAP[o.status] || {};
-                return (
-                  <tr key={o._id}>
-                    <td><Link to={'/orders/' + o._id}>#{o.orderNumber}</Link></td>
-                    <td>{o.customer?.name}</td><td>{o.customer?.phone}</td><td>{o.total}৳</td>
-                    <td><span className="pill" style={{ background: st.color }}>{st.label}</span></td>
-                    <td className="muted">{bnDate(o.createdAt)}</td>
-                  </tr>
-                );
-              })}
-              {recent.length === 0 && <tr><td colSpan="6" className="muted">এখনো কোনো অর্ডার নেই।</td></tr>}
+              {recent.map((o) => (
+                <tr key={o._id}>
+                  <td><Link to={'/orders/' + o._id} className="cell-strong">#{o.orderNumber}</Link></td>
+                  <td>{o.customer?.name}</td>
+                  <td>{o.customer?.phone}</td>
+                  <td className="num cell-strong">{money(o.total)}</td>
+                  <td><StatusPill status={o.status} /></td>
+                  <td className="muted">{fmtDate(o.createdAt)}</td>
+                </tr>
+              ))}
+              {recent.length === 0 && <tr><td colSpan="6" className="muted">No orders yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -165,9 +159,9 @@ function Stat({ label, value, sub, accent }) {
   );
 }
 
-/** Dependency-free SVG bar chart: orders as bars, revenue as a line. */
+/** Dependency-free SVG chart: orders as bars, revenue as a line. */
 function Chart({ series }) {
-  const W = 560, H = 180, pad = 24;
+  const W = 560, H = 190, pad = 24;
   const maxOrders = Math.max(1, ...series.map((s) => s.orders));
   const maxRev = Math.max(1, ...series.map((s) => s.revenue));
   const bw = (W - pad * 2) / series.length;
@@ -178,16 +172,22 @@ function Chart({ series }) {
 
   return (
     <div className="chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart">
-        <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="#e5e9ef" />
+      <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Orders and revenue for the last 30 days">
+        {[0.25, 0.5, 0.75].map((f) => (
+          <line key={f} x1={pad} x2={W - pad} y1={pad + (H - pad * 2) * f} y2={pad + (H - pad * 2) * f} stroke="#eef2f6" />
+        ))}
+        <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="#e2e8f0" />
         {series.map((s, i) => (
-          <rect key={i} x={x(i) + 2} y={yO(s.orders)} width={Math.max(1, bw - 4)} height={H - pad - yO(s.orders)} fill="#e63946" opacity="0.75">
-            <title>{s.date}: {s.orders} অর্ডার, {s.revenue}৳</title>
+          <rect key={i} x={x(i) + 2} y={yO(s.orders)} width={Math.max(1, bw - 4)} height={H - pad - yO(s.orders)} rx="2" fill="#e11d48" opacity="0.8">
+            <title>{s.date}: {s.orders} orders, {money(s.revenue)}</title>
           </rect>
         ))}
-        <polyline points={line} fill="none" stroke="#2a9d8f" strokeWidth="2" />
+        <polyline points={line} fill="none" stroke="#0d9488" strokeWidth="2" strokeLinejoin="round" />
       </svg>
-      <div className="chart-legend"><span className="lg lg-o">▮ অর্ডার</span><span className="lg lg-r">▬ রেভিনিউ</span></div>
+      <div className="chart-legend">
+        <span><i style={{ background: '#e11d48' }} />Orders</span>
+        <span><i style={{ background: '#0d9488' }} />Revenue</span>
+      </div>
     </div>
   );
 }

@@ -1,13 +1,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { STATUSES, STATUS_MAP, bnDate } from '../constants.js';
+import { STATUSES, fmtDate, money, fieldLabel } from '../constants.js';
+import { StatusPill, Pill, Notice } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 
 function waLink(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
   const intl = digits.startsWith('0') ? '88' + digits : digits;
   return 'https://wa.me/' + intl;
 }
+
+const FRAUD_VERDICT = {
+  good: 'Good',
+  caution: 'Caution',
+  risky: 'Risky',
+  unknown: 'No data',
+};
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -17,7 +26,7 @@ export default function OrderDetail() {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [fraud, setFraud] = useState(null);
-  const [courierMsg, setCourierMsg] = useState('');
+  const [courierMsg, setCourierMsg] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -53,9 +62,9 @@ export default function OrderDetail() {
   }
 
   async function toCourier() {
-    setBusy(true); setCourierMsg('');
-    try { const r = await api('/orders/' + id + '/courier', { method: 'POST' }); setOrder(r.order); setCourierMsg('কুরিয়ারে পাঠানো হয়েছে।'); }
-    catch (e) { setCourierMsg(e.message); }
+    setBusy(true); setCourierMsg(null);
+    try { const r = await api('/orders/' + id + '/courier', { method: 'POST' }); setOrder(r.order); setCourierMsg({ ok: true, text: 'Sent to courier.' }); }
+    catch (e) { setCourierMsg({ ok: false, text: e.message }); }
     finally { setBusy(false); }
   }
 
@@ -75,77 +84,68 @@ export default function OrderDetail() {
   }
 
   if (error) return <p className="err">{error}</p>;
-  if (!order) return <p className="muted">লোড হচ্ছে…</p>;
-
-  const st = STATUS_MAP[order.status] || {};
+  if (!order) return <p className="muted">Loading…</p>;
 
   return (
     <div className="detail">
       <div className="page-head">
         <h1>
-          অর্ডার #{order.orderNumber}{' '}
-          <span className="pill" style={{ background: st.color }}>{st.label}</span>
+          Order #{order.orderNumber}{' '}
+          <StatusPill status={order.status} />
         </h1>
-        <Link to="/orders" className="btn-ghost">← তালিকায় ফিরুন</Link>
+        <Link to="/orders" className="btn-ghost"><Icon name="back" size={16} /> Back to list</Link>
       </div>
 
       <div className="detail-grid">
         {/* Left: customer + items */}
         <div className="card">
-          <h3>কাস্টমার</h3>
-          <div className="kv"><span>নাম</span><b>{order.customer.name}</b></div>
-          <div className="kv"><span>ফোন</span><b>{order.customer.phone}</b></div>
-          <div className="kv"><span>ঠিকানা</span><b>{order.customer.address}</b></div>
+          <h3>Customer</h3>
+          <div className="kv"><span>Name</span><b>{order.customer.name}</b></div>
+          <div className="kv"><span>Phone</span><b>{order.customer.phone}</b></div>
+          <div className="kv"><span>Address</span><b>{order.customer.address}</b></div>
 
           {order.customFields && Object.keys(order.customFields).length > 0 && (
             <>
-              <h4>সাইজ, কালার ও অন্যান্য তথ্য</h4>
-              {Object.entries(order.customFields).map(([k, v]) => {
-                const label = order.customFieldLabels?.[k] || (k === 'size' ? 'সাইজ' : k === 'color' ? 'কালার' : k);
-                return (
-                  <div className="kv" key={k}>
-                    <span>{label}</span>
-                    <b style={{ color: '#2563eb' }}>{String(v)}</b>
-                  </div>
-                );
-              })}
+              <h4>Size, colour &amp; other details</h4>
+              {Object.entries(order.customFields).map(([k, v]) => (
+                <div className="kv" key={k}>
+                  <span>{fieldLabel(order, k)}</span>
+                  <b style={{ color: '#2563eb' }}>{String(v)}</b>
+                </div>
+              ))}
             </>
           )}
 
           <div className="quick-actions">
-            <a className="btn-outline" href={'tel:' + order.customer.phone}>📞 কল</a>
-            <a className="btn-outline" href={waLink(order.customer.phone)} target="_blank" rel="noreferrer">💬 WhatsApp</a>
+            <a className="btn-outline" href={'tel:' + order.customer.phone}><Icon name="phone" size={16} /> Call</a>
+            <a className="btn-outline" href={waLink(order.customer.phone)} target="_blank" rel="noreferrer"><Icon name="chat" size={16} /> WhatsApp</a>
           </div>
 
-          <h3 style={{ marginTop: 20 }}>অর্ডার</h3>
+          <h3 style={{ marginTop: 20 }}>Order</h3>
           <div className="kv">
             <div>
               <b style={{ fontSize: '1rem', display: 'block' }}>{order.offerTitle}</b>
               {(order.variantSummary || (order.customFields && Object.keys(order.customFields).length > 0)) && (
                 <div style={{ marginTop: 5, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {order.variantSummary ? (
-                    <span className="pill sm" style={{ background: '#2563eb', padding: '3px 8px', fontSize: '0.78rem' }}>
-                      🏷️ {order.variantSummary}
-                    </span>
+                    <Pill color="#2563eb" small>{order.variantSummary}</Pill>
                   ) : (
                     Object.entries(order.customFields || {}).map(([k, v]) => (
-                      <span key={k} className="pill sm" style={{ background: '#2563eb', padding: '3px 8px', fontSize: '0.78rem' }}>
-                        {order.customFieldLabels?.[k] || (k === 'size' ? 'সাইজ' : k === 'color' ? 'কালার' : k)}: {String(v)}
-                      </span>
+                      <Pill key={k} color="#2563eb" small>{fieldLabel(order, k)}: {String(v)}</Pill>
                     ))
                   )}
                 </div>
               )}
             </div>
-            <b>{order.unitPrice}৳ × {order.quantity}</b>
+            <b>{money(order.unitPrice)} × {order.quantity}</b>
           </div>
-          <div className="kv"><span>সাবটোটাল</span><b>{order.subtotal}৳</b></div>
-          <div className="kv"><span>ডেলিভারি ({order.deliveryZoneName})</span><b>{order.deliveryCharge}৳</b></div>
-          <div className="kv total"><span>সর্বমোট</span><b>{order.total}৳</b></div>
+          <div className="kv"><span>Subtotal</span><b>{money(order.subtotal)}</b></div>
+          <div className="kv"><span>Delivery ({order.deliveryZoneName})</span><b>{money(order.deliveryCharge)}</b></div>
+          <div className="kv total"><span>Total</span><b>{money(order.total)}</b></div>
 
-          <div className="kv" style={{ marginTop: 14 }}><span>সোর্স (অ্যাトリবিউশন)</span><b>{order.source}</b></div>
+          <div className="kv" style={{ marginTop: 14 }}><span>Source (attribution)</span><b>{order.source}</b></div>
           {(order.tracking?.utm?.campaign || order.tracking?.campaignId) && (
-            <div className="kv"><span>ক্যাম্পেইন</span><b>{order.tracking?.utm?.campaign || order.tracking?.campaignId}</b></div>
+            <div className="kv"><span>Campaign</span><b>{order.tracking?.utm?.campaign || order.tracking?.campaignId}</b></div>
           )}
           {order.tracking?.adId && (
             <div className="kv"><span>Ad ID</span><b style={{ fontFamily: 'monospace' }}>{order.tracking.adId}</b></div>
@@ -169,7 +169,7 @@ export default function OrderDetail() {
 
         {/* Right: status, notes, history */}
         <div className="card">
-          <h3>স্ট্যাটাস পরিবর্তন</h3>
+          <h3>Change status</h3>
           <div className="status-btns">
             {STATUSES.map((s) => (
               <button
@@ -184,65 +184,61 @@ export default function OrderDetail() {
             ))}
           </div>
 
-          <h3 style={{ marginTop: 20 }}>কুরিয়ার ও ফ্রড চেক</h3>
+          <h3 style={{ marginTop: 20 }}>Courier &amp; fraud check</h3>
           <div className="courier-box">
             {order.courier?.consignmentId ? (
               <div className="kv"><span>{order.courier.provider}</span><b>{order.courier.trackingCode || order.courier.consignmentId}</b></div>
             ) : (
-              <button className="btn-outline" disabled={busy} onClick={toCourier}>🚚 কুরিয়ারে পাঠান</button>
+              <button className="btn-outline" disabled={busy} onClick={toCourier}><Icon name="truck" size={16} /> Send to courier</button>
             )}
-            <button className="btn-ghost" disabled={busy} onClick={runFraud}>🛡️ ফ্রড চেক</button>
+            <button className="btn-ghost" disabled={busy} onClick={runFraud}><Icon name="shield" size={16} /> Fraud check</button>
           </div>
-          {courierMsg && <p className={courierMsg.includes('হয়েছে') ? 'ok-text' : 'err'}>{courierMsg}</p>}
+          {courierMsg && <Notice type={courierMsg.ok ? 'ok' : 'err'}>{courierMsg.text}</Notice>}
           {fraud && (
             <div className={'fraud-result ' + fraud.verdict}>
-              <b>ফ্রড সিগন্যাল: {{ good: '✅ ভালো', caution: '⚠️ সতর্ক', risky: '❌ ঝুঁকিপূর্ণ', unknown: 'তথ্য নেই' }[fraud.verdict]}</b>
+              <b>Fraud signal: {FRAUD_VERDICT[fraud.verdict] || fraud.verdict}</b>
               <div className="muted">
-                মোট {fraud.internal.totalOrders} অর্ডার · ডেলিভারড {fraud.internal.delivered} · ব্যর্থ {fraud.internal.failed}
-                {fraud.internal.successRate != null && ` · সাকসেস রেট ${fraud.internal.successRate}%`}
+                {fraud.internal.totalOrders} orders · {fraud.internal.delivered} delivered · {fraud.internal.failed} failed
+                {fraud.internal.successRate != null && ` · ${fraud.internal.successRate}% success rate`}
               </div>
             </div>
           )}
 
-          <h3 style={{ marginTop: 20 }}>নোট</h3>
+          <h3 style={{ marginTop: 20 }}>Notes</h3>
           <form onSubmit={addNote} className="note-form">
-            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="নোট লিখুন…" />
-            <button className="btn-primary" disabled={busy}>যোগ করুন</button>
+            <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Write a note…" />
+            <button className="btn-primary" disabled={busy}>Add</button>
           </form>
           <ul className="notes">
             {(order.notes || []).slice().reverse().map((n, i) => (
               <li key={i}>
                 <p>{n.text}</p>
-                <span className="muted">{n.by} · {bnDate(n.at)}</span>
+                <span className="muted">{n.by} · {fmtDate(n.at)}</span>
               </li>
             ))}
-            {(!order.notes || order.notes.length === 0) && <li className="muted">কোনো নোট নেই।</li>}
+            {(!order.notes || order.notes.length === 0) && <li className="muted">No notes yet.</li>}
           </ul>
 
-          <h3 style={{ marginTop: 20 }}>স্ট্যাটাস হিস্ট্রি</h3>
+          <h3 style={{ marginTop: 20 }}>Status history</h3>
           <ul className="timeline">
             {(order.statusHistory || []).slice().reverse().map((h, i) => (
               <li key={i}>
-                <span className="pill sm" style={{ background: (STATUS_MAP[h.status] || {}).color }}>
-                  {(STATUS_MAP[h.status] || {}).label}
-                </span>
-                <span className="muted">{h.by} · {bnDate(h.at)}</span>
+                <StatusPill status={h.status} small />
+                <span className="muted">{h.by} · {fmtDate(h.at)}</span>
               </li>
             ))}
           </ul>
 
           {history.length > 0 && (
             <>
-              <h3 style={{ marginTop: 20 }}>এই ফোনের আগের অর্ডার</h3>
+              <h3 style={{ marginTop: 20 }}>Previous orders from this phone</h3>
               <ul className="history">
                 {history.map((h) => (
                   <li key={h._id}>
                     <Link to={'/orders/' + h._id}>#{h.orderNumber}</Link>
-                    <span className="pill sm" style={{ background: (STATUS_MAP[h.status] || {}).color }}>
-                      {(STATUS_MAP[h.status] || {}).label}
-                    </span>
-                    <span>{h.total}৳</span>
-                    <span className="muted">{bnDate(h.createdAt)}</span>
+                    <StatusPill status={h.status} small />
+                    <span>{money(h.total)}</span>
+                    <span className="muted">{fmtDate(h.createdAt)}</span>
                   </li>
                 ))}
               </ul>

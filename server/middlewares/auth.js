@@ -15,13 +15,13 @@ function readToken(req) {
 
 export async function requireAdmin(req, res, next) {
   const token = readToken(req);
-  if (!token) return res.status(401).json({ error: 'অননুমোদিত — লগইন করুন।' });
+  if (!token) return res.status(401).json({ error: 'Unauthorized — please log in.' });
 
   let payload;
   try {
     payload = verifyToken(token);
   } catch {
-    return res.status(401).json({ error: 'সেশন মেয়াদোত্তীর্ণ — আবার লগইন করুন।' });
+    return res.status(401).json({ error: 'Session expired — please log in again.' });
   }
 
   let admin;
@@ -33,7 +33,7 @@ export async function requireAdmin(req, res, next) {
     return next(err);
   }
   if (!admin || !admin.active) {
-    return res.status(401).json({ error: 'অ্যাকাউন্ট নিষ্ক্রিয় বা অবৈধ।' });
+    return res.status(401).json({ error: 'Account is inactive or invalid.' });
   }
 
   req.admin = admin;
@@ -51,7 +51,7 @@ export function requireAdminToken(req, res, next) {
     req.adminClaims = { id: payload.sub, role: payload.role, name: payload.name };
     next();
   } catch {
-    return res.status(401).json({ error: 'সেশন মেয়াদোত্তীর্ণ — আবার লগইন করুন।' });
+    return res.status(401).json({ error: 'Session expired — please log in again.' });
   }
 }
 
@@ -59,7 +59,7 @@ export function requireAdminToken(req, res, next) {
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.admin || !roles.includes(req.admin.role)) {
-      return res.status(403).json({ error: 'এই কাজের অনুমতি নেই।' });
+      return res.status(403).json({ error: 'You do not have permission for this action.' });
     }
     next();
   };

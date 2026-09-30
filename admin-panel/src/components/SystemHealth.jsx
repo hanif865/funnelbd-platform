@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import Icon from './Icon.jsx';
 
 const SEEN_KEY = 'fbd_errors_seen_at';
 const POLL_MS = 60 * 1000;
@@ -78,11 +79,11 @@ export function SystemBanner({ health, unreachable, unseen }) {
 
   if (unreachable) {
     level = 'critical';
-    text = 'সার্ভারে পৌঁছানো যাচ্ছে না — ইন্টারনেট সংযোগ বা সার্ভার চালু আছে কিনা দেখুন।';
+    text = 'Cannot reach the server — check your internet connection and that the server is running.';
   } else if (health && health.db?.state !== 'connected') {
     level = 'critical';
     const dbErr = (health.errors || []).find((e) => e.source === 'db' || ['db_unreachable', 'auth_failed'].includes(e.kind));
-    text = (dbErr?.title || 'ডেটাবেসের সাথে সংযোগ নেই') + ' — নতুন অর্ডার সেভ হচ্ছে না!';
+    text = (dbErr?.title || 'No database connection') + ' — new orders are not being saved!';
   } else if (unseen.some((e) => e.severity === 'critical' && !isRecoveredConnectionError(e))) {
     // A critical problem that being connected doesn't fix (e.g. storage full).
     level = 'critical';
@@ -91,22 +92,22 @@ export function SystemBanner({ health, unreachable, unseen }) {
     // We got here, so the DB is connected NOW: the outage is over. Say so —
     // showing the raw "no connection" title would read as an ongoing problem.
     const e = unseen.find(isRecoveredConnectionError);
-    const at = new Date(e.lastAt).toLocaleTimeString('bn-BD', { hour: 'numeric', minute: '2-digit' });
+    const at = new Date(e.lastAt).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
     level = 'warning';
-    text = `ডেটাবেস সংযোগ সাময়িকভাবে বিচ্ছিন্ন হয়েছিল (${at})${e.count > 1 ? ` ×${e.count}` : ''} — এখন আবার সংযুক্ত, সব ঠিক আছে।`;
+    text = `The database connection dropped briefly (${at})${e.count > 1 ? ` ×${e.count}` : ''} — it is connected again and everything is fine.`;
   } else if (health?.storage?.percent >= 80) {
     level = health.storage.percent >= 90 ? 'critical' : 'warning';
-    text = `ডেটাবেসের স্টোরেজ ${health.storage.percent}% ভরে গেছে (${health.storage.usedMb}MB / ${health.storage.limitMb}MB)।`;
+    text = `Database storage is ${health.storage.percent}% full (${health.storage.usedMb}MB of ${health.storage.limitMb}MB).`;
   } else if (unseen.length) {
     level = 'warning';
-    text = `${unseen.length}টি নতুন সিস্টেম ত্রুটি হয়েছে।`;
+    text = `${unseen.length} new system ${unseen.length === 1 ? 'error' : 'errors'}.`;
   }
 
   if (!level) return null;
   return (
     <div className={'sys-banner ' + level} role="alert">
-      <span>{level === 'critical' ? '⛔' : '⚠️'} {text}</span>
-      <Link to="/system">বিস্তারিত দেখুন →</Link>
+      <span><Icon name="alert" size={17} /> {text}</span>
+      <Link to="/system">View details →</Link>
     </div>
   );
 }

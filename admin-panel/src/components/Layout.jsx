@@ -1,58 +1,95 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { useSystemHealth, SystemBanner } from './SystemHealth.jsx';
+import Icon from './Icon.jsx';
 
-// Sidebar items. Phase 1 ships Orders; the rest are placeholders shown
-// disabled so the eventual IA is visible.
-// adminOnly items are hidden for staff (staff = order management only).
+// Sidebar navigation, grouped. adminOnly items are hidden for staff
+// (staff = order management only).
 const NAV = [
-  { to: '/dashboard', label: 'ড্যাশবোর্ড', icon: '📊', ready: true },
-  { to: '/orders', label: 'অর্ডার', icon: '📦', ready: true },
-  { to: '/incomplete', label: 'অসম্পূর্ণ অর্ডার', icon: '⏳', ready: true },
-  { to: '/offers', label: 'প্রোডাক্ট ও অফার', icon: '🛍️', ready: true, adminOnly: true },
-  { to: '/form-builder', label: 'ফর্ম বিল্ডার', icon: '📝', ready: true, adminOnly: true },
-  { to: '/delivery', label: 'ডেলিভারি', icon: '🚚', ready: true, adminOnly: true },
-  { to: '/page-editor', label: 'ল্যান্ডিং পেজ', icon: '🎨', ready: true, adminOnly: true },
-  { to: '/tracking', label: 'ট্র্যাকিং', icon: '📈', ready: true, adminOnly: true },
-  { to: '/settings', label: 'সেটিংস', icon: '⚙️', ready: true, adminOnly: true },
-  { to: '/system', label: 'সিস্টেম স্ট্যাটাস', icon: '🩺', ready: true, badge: 'errors' },
+  {
+    section: 'Sales',
+    items: [
+      { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+      { to: '/orders', label: 'Orders', icon: 'orders' },
+      { to: '/incomplete', label: 'Incomplete orders', icon: 'clock' },
+    ],
+  },
+  {
+    section: 'Store',
+    items: [
+      { to: '/offers', label: 'Offers', icon: 'tag', adminOnly: true },
+      { to: '/form-builder', label: 'Checkout form', icon: 'form', adminOnly: true },
+      { to: '/delivery', label: 'Delivery', icon: 'truck', adminOnly: true },
+      { to: '/page-editor', label: 'Landing page', icon: 'layout', adminOnly: true },
+    ],
+  },
+  {
+    section: 'System',
+    items: [
+      { to: '/tracking', label: 'Tracking', icon: 'chart', adminOnly: true },
+      { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
+      { to: '/system', label: 'System status', icon: 'pulse', badge: 'errors' },
+    ],
+  },
 ];
+
+function initials(name) {
+  return String(name || '?')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
 
 export default function Layout() {
   const { admin, logout } = useAuth();
   const sys = useSystemHealth();
   const dbDown = sys.unreachable || (sys.health && sys.health.db?.state !== 'connected');
   const badgeCount = sys.unseen.length + (dbDown ? 1 : 0);
+  const isAdmin = admin?.role === 'admin';
 
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">FunnelBD</div>
+        <div className="brand">
+          <div className="logo-mark">F</div>
+          <span>FunnelBD</span>
+        </div>
         <nav>
-          {NAV.filter((item) => !item.adminOnly || admin?.role === 'admin').map((item) =>
-            item.ready ? (
-              <NavLink key={item.to} to={item.to} className="nav-item">
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-                {item.badge === 'errors' && badgeCount > 0 && <span className="nav-badge">{badgeCount}</span>}
-              </NavLink>
-            ) : (
-              <span key={item.to} className="nav-item disabled" title="শীঘ্রই আসছে">
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-                <span className="soon">শীঘ্রই</span>
-              </span>
-            )
-          )}
+          {NAV.map((group) => {
+            const items = group.items.filter((item) => !item.adminOnly || isAdmin);
+            if (!items.length) return null;
+            return (
+              <div key={group.section}>
+                <div className="nav-section">{group.section}</div>
+                {items.map((item) => (
+                  <NavLink key={item.to} to={item.to} className="nav-item" title={item.label}>
+                    <Icon name={item.icon} />
+                    <span>{item.label}</span>
+                    {item.badge === 'errors' && badgeCount > 0 && <span className="nav-badge">{badgeCount}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
         </nav>
+        <div className="sidebar-foot">FunnelBD admin</div>
       </aside>
 
       <div className="main">
         <header className="topbar">
-          <div />
+          <div className="topbar-title">Admin panel</div>
           <div className="user">
-            <span>{admin?.name} · {admin?.role}</span>
-            <button className="btn-ghost" onClick={logout}>লগআউট</button>
+            <div className="avatar">{initials(admin?.name)}</div>
+            <div className="user-meta">
+              <div className="user-name">{admin?.name}</div>
+              <div className="user-role">{admin?.role}</div>
+            </div>
+            <button className="btn-ghost sm" onClick={logout} title="Log out">
+              <Icon name="logout" size={16} /> Log out
+            </button>
           </div>
         </header>
         <SystemBanner {...sys} />

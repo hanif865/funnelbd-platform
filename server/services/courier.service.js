@@ -76,7 +76,7 @@ async function pathaoToken(cfg) {
 
 async function pathaoCreate(cfg, order) {
   const token = await pathaoToken(cfg);
-  if (!token) return { ok: false, error: 'Pathao token পাওয়া যায়নি', response: null };
+  if (!token) return { ok: false, error: 'Pathao token not found', response: null };
   const res = await fetch(cfg.baseUrl.replace(/\/$/, '') + '/aladdin/api/v1/orders', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -107,14 +107,14 @@ export async function sendToCourier(order) {
   const provider = cfg.provider;
   try {
     if (provider === 'steadfast') {
-      if (!cfg.steadfast.enabled || !cfg.steadfast.apiKey) return { ok: false, error: 'Steadfast কনফিগার করা নেই।' };
+      if (!cfg.steadfast.enabled || !cfg.steadfast.apiKey) return { ok: false, error: 'Steadfast is not configured.' };
       return { provider, ...(await steadfastCreate(cfg.steadfast, order)) };
     }
     if (provider === 'pathao') {
-      if (!cfg.pathao.enabled || !cfg.pathao.clientId) return { ok: false, error: 'Pathao কনফিগার করা নেই।' };
+      if (!cfg.pathao.enabled || !cfg.pathao.clientId) return { ok: false, error: 'Pathao is not configured.' };
       return { provider, ...(await pathaoCreate(cfg.pathao, order)) };
     }
-    return { ok: false, error: 'কোনো কুরিয়ার প্রোভাইডার সিলেক্ট করা নেই (সেটিংস)।' };
+    return { ok: false, error: 'No courier provider is selected (Settings).' };
   } catch (err) {
     return { ok: false, provider, error: err.message, response: null };
   }

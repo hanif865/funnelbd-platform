@@ -18,7 +18,7 @@ export const uploadMiddleware = multer({
   fileFilter: (req, file, cb) => {
     // Loose pre-check; sharp decides for real (content, not extension/mime).
     const ok = file.mimetype.startsWith('image/') || /\.(heic|heif|avif)$/i.test(file.originalname);
-    if (!ok) return cb(new Error('শুধু ছবি আপলোড করা যাবে।'));
+    if (!ok) return cb(new Error('Only images can be uploaded.'));
     cb(null, true);
   },
 }).single('image');
@@ -31,10 +31,10 @@ export const uploadMiddleware = multer({
 export function handleUpload(req, res, next) {
   uploadMiddleware(req, res, async (err) => {
     if (err) {
-      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'ছবি ১৫MB-এর বেশি হতে পারবে না।' : err.message;
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Image cannot be larger than 15MB.' : err.message;
       return res.status(400).json({ error: msg });
     }
-    if (!req.file) return res.status(400).json({ error: 'কোনো ফাইল পাওয়া যায়নি।' });
+    if (!req.file) return res.status(400).json({ error: 'No file received.' });
 
     try {
       const { buffer, width, height } = await optimizeToWebp(req.file.buffer);

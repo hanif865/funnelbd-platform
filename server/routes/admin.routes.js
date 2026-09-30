@@ -80,7 +80,7 @@ router.use((req, res, next) => {
 });
 
 // ── Auth ─────────────────────────────────────────────
-router.post('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'অনেকবার ভুল চেষ্টা — ১৫ মিনিট পর আবার চেষ্টা করুন।' }), login);
+router.post('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many failed attempts — try again in 15 minutes.' }), login);
 router.post('/logout', logout);
 router.get('/me', requireAdmin, me);
 

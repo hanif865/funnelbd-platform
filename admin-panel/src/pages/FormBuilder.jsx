@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
+import { Notice } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 
 const TYPES = [
-  { v: 'text', l: 'টেক্সট' }, { v: 'number', l: 'নম্বর' }, { v: 'textarea', l: 'বড় টেক্সট' },
-  { v: 'radio', l: 'রেডিও' }, { v: 'select', l: 'ড্রপডাউন' }, { v: 'checkbox', l: 'চেকবক্স' },
+  { v: 'text', l: 'Text' }, { v: 'number', l: 'Number' }, { v: 'textarea', l: 'Long text' },
+  { v: 'radio', l: 'Radio' }, { v: 'select', l: 'Dropdown' }, { v: 'checkbox', l: 'Checkbox' },
 ];
 const blank = { label: '', name: '', type: 'text', options: [], placeholder: '', required: false, active: true };
 
@@ -35,7 +37,7 @@ export default function FormBuilder() {
 
   async function remove(f) {
     if (f.isCore) return;
-    if (!confirm(`"${f.label}" ফিল্ড ডিলিট করবেন?`)) return;
+    if (!confirm(`Delete the "${f.label}" field?`)) return;
     try { await api('/fields/' + f._id, { method: 'DELETE' }); load(); }
     catch (e) { setMsg(e.message); }
   }
@@ -43,33 +45,33 @@ export default function FormBuilder() {
   return (
     <div>
       <div className="page-head">
-        <h1>ফর্ম বিল্ডার</h1>
-        <button className="btn-primary" onClick={() => setEditing({ ...blank })}>+ নতুন ফিল্ড</button>
+        <h1>Form builder</h1>
+        <button className="btn-primary" onClick={() => setEditing({ ...blank })}><Icon name="plus" size={16} /> New field</button>
       </div>
-      {msg && <p className="err">{msg}</p>}
+      <Notice type="err">{msg}</Notice>
 
       <div className="builder-grid">
         <div className="card">
-          <h3>ফিল্ড তালিকা</h3>
-          <p className="muted" style={{ marginTop: 0 }}>কোর ফিল্ড (নাম/ফোন/ঠিকানা) লক করা — শুধু label বদলানো যায়।</p>
+          <h3>Fields</h3>
+          <p className="muted" style={{ marginTop: 0 }}>Core fields (name / phone / address) are locked — only the label can be changed.</p>
           {fields.map((f, i) => (
             <div className={'field-row' + (f.active ? '' : ' inactive')} key={f._id}>
               <div className="fr-move">
-                <button className="btn-ghost sm" disabled={i === 0} onClick={() => move(i, -1)}>▲</button>
-                <button className="btn-ghost sm" disabled={i === fields.length - 1} onClick={() => move(i, 1)}>▼</button>
+                <button className="btn-ghost sm" disabled={i === 0} onClick={() => move(i, -1)} title="Move up"><Icon name="up" size={14} /></button>
+                <button className="btn-ghost sm" disabled={i === fields.length - 1} onClick={() => move(i, 1)} title="Move down"><Icon name="down" size={14} /></button>
               </div>
               <div className="fr-main">
-                <b>{f.label}</b> {f.isCore && <span className="lock">🔒 কোর</span>}
-                <div className="muted">{f.name} · {TYPES.find((t) => t.v === f.type)?.l}{f.required ? ' · আবশ্যক' : ''}</div>
+                <b>{f.label}</b> {f.isCore && <span className="lock">Core</span>}
+                <div className="muted">{f.name} · {TYPES.find((t) => t.v === f.type)?.l}{f.required ? ' · required' : ''}</div>
               </div>
               <div className="fr-actions">
                 {!f.isCore && (
-                  <label className="mini-switch" title="চালু/বন্ধ">
+                  <label className="mini-switch" title="On / off">
                     <input type="checkbox" checked={f.active} onChange={() => toggleActive(f)} />
                   </label>
                 )}
-                <button className="btn-ghost sm" onClick={() => setEditing(f)}>এডিট</button>
-                {!f.isCore && <button className="btn-ghost sm danger" onClick={() => remove(f)}>✕</button>}
+                <button className="btn-ghost sm" onClick={() => setEditing(f)}><Icon name="edit" size={15} /> Edit</button>
+                {!f.isCore && <button className="btn-ghost sm danger" onClick={() => remove(f)} title="Delete"><Icon name="trash" size={15} /></button>}
               </div>
             </div>
           ))}
@@ -77,12 +79,12 @@ export default function FormBuilder() {
 
         {/* Live preview */}
         <div className="card preview">
-          <h3>লাইভ প্রিভিউ</h3>
+          <h3>Live preview</h3>
           {fields.filter((f) => f.active).map((f) => (
             <div className="fld" key={f._id}>
               <label>{f.label}{f.required && <span style={{ color: '#e63946' }}> *</span>}</label>
               {f.type === 'textarea' ? <textarea rows={2} placeholder={f.placeholder} disabled /> :
-                f.type === 'select' ? <select disabled><option>{f.placeholder || 'নির্বাচন'}</option></select> :
+                f.type === 'select' ? <select disabled><option>{f.placeholder || 'Select'}</option></select> :
                 f.type === 'radio' ? <div className="radio-preview">{f.options.map((o) => <span key={o} className="rp">{o}</span>)}</div> :
                 f.type === 'checkbox' ? <label className="cbx"><input type="checkbox" disabled /> {f.placeholder || f.label}</label> :
                 <input placeholder={f.placeholder} disabled />}
@@ -121,23 +123,23 @@ function FieldModal({ field, onClose, onSaved }) {
   return (
     <div className="modal" onClick={onClose}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head"><h3>{isNew ? 'নতুন ফিল্ড' : (f.isCore ? 'কোর ফিল্ড (সীমিত এডিট)' : 'ফিল্ড এডিট')}</h3><button className="btn-ghost" onClick={onClose}>✕</button></div>
-        <div className="fld"><label>Label (যা কাস্টমার দেখবে)</label><input value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
+        <div className="modal-head"><h3>{isNew ? 'New field' : (f.isCore ? 'Core field (limited editing)' : 'Edit field')}</h3><button className="btn-ghost" onClick={onClose}><Icon name="x" size={16} /></button></div>
+        <div className="fld"><label>Label (what the customer sees)</label><input value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} /></div>
         {!f.isCore && (
           <>
             <div className="fld"><label>Field name (English, unique)</label>
-              <input value={f.name} disabled={!isNew} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="যেমন: size" />
+              <input value={f.name} disabled={!isNew} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. size" />
             </div>
-            <div className="fld"><label>টাইপ</label>
+            <div className="fld"><label>Type</label>
               <select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>{TYPES.map((t) => <option key={t.v} value={t.v}>{t.l}</option>)}</select>
             </div>
-            {hasOptions && <div className="fld"><label>অপশন (প্রতি লাইনে একটি)</label><textarea rows={3} value={f.optionsText} onChange={(e) => setF({ ...f, optionsText: e.target.value })} /></div>}
-            <label className="cbx"><input type="checkbox" checked={!!f.required} onChange={(e) => setF({ ...f, required: e.target.checked })} /> আবশ্যক</label>
+            {hasOptions && <div className="fld"><label>Options (one per line)</label><textarea rows={3} value={f.optionsText} onChange={(e) => setF({ ...f, optionsText: e.target.value })} /></div>}
+            <label className="cbx"><input type="checkbox" checked={!!f.required} onChange={(e) => setF({ ...f, required: e.target.checked })} /> Required</label>
           </>
         )}
         <div className="fld"><label>Placeholder</label><input value={f.placeholder || ''} onChange={(e) => setF({ ...f, placeholder: e.target.value })} /></div>
         {err && <p className="err">{err}</p>}
-        <div className="save-bar"><button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'সেভ হচ্ছে…' : 'সেভ'}</button></div>
+        <div className="save-bar"><button className="btn-primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>
       </div>
     </div>
   );

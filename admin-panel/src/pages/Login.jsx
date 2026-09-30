@@ -18,7 +18,7 @@ export default function Login() {
       await login(email, password);
       navigate('/orders', { replace: true });
     } catch (err) {
-      setError(err.message || 'লগইন ব্যর্থ।');
+      setError(err.message || 'Sign-in failed.');
     } finally {
       setBusy(false);
     }
@@ -27,21 +27,21 @@ export default function Login() {
   return (
     <div className="center-screen">
       <form className="login-card" onSubmit={onSubmit}>
-        <h1 className="login-brand">FunnelBD</h1>
-        <p className="login-sub">অ্যাডমিন প্যানেল</p>
+        <h1 className="login-brand"><span className="logo-mark">F</span> FunnelBD</h1>
+        <p className="login-sub">Sign in to the admin panel</p>
 
-        <label className="lbl">ইমেইল</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@funnelbd.local" required autoFocus />
+        <label className="lbl" htmlFor="login-email">Email</label>
+        <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com" autoComplete="username" required autoFocus />
 
-        <label className="lbl">পাসওয়ার্ড</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••" required />
+        <label className="lbl" htmlFor="login-password">Password</label>
+        <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••" autoComplete="current-password" required />
 
-        {error && <p className="err">{error}</p>}
+        {error && <p className="err" role="alert">{error}</p>}
 
         <button className="btn-primary" type="submit" disabled={busy}>
-          {busy ? 'লগইন হচ্ছে…' : 'লগইন'}
+          {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
     </div>

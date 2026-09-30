@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getToken } from '../api.js';
-import { STATUSES, STATUS_MAP, bnDate } from '../constants.js';
+import { STATUSES, fmtDate, money, num, fieldLabel } from '../constants.js';
+import { StatusPill, Pill, Notice } from '../components/ui.jsx';
+import Icon from '../components/Icon.jsx';
 import { useAuth } from '../auth.jsx';
 
 export default function Orders() {
@@ -34,13 +36,13 @@ export default function Orders() {
   async function applyBulkStatus() {
     if (!bulkStatus || sel.size === 0) return;
     setBusy(true); setMsg('');
-    try { const r = await api('/orders/bulk/status', { method: 'PATCH', body: { ids: [...sel], status: bulkStatus } }); setMsg(`${r.updated} অর্ডার আপডেট হয়েছে।`); load(); }
+    try { const r = await api('/orders/bulk/status', { method: 'PATCH', body: { ids: [...sel], status: bulkStatus } }); setMsg(`${r.updated} order(s) updated.`); load(); }
     catch (e) { setMsg(e.message); } finally { setBusy(false); }
   }
   async function bulkToCourier() {
     if (sel.size === 0) return;
     setBusy(true); setMsg('');
-    try { const r = await api('/orders/bulk/courier', { method: 'POST', body: { ids: [...sel] } }); setMsg(`${r.sent} কুরিয়ারে পাঠানো হয়েছে${r.failures.length ? `, ${r.failures.length} ব্যর্থ` : ''}।`); load(); }
+    try { const r = await api('/orders/bulk/courier', { method: 'POST', body: { ids: [...sel] } }); setMsg(`${r.sent} sent to courier${r.failures.length ? `, ${r.failures.length} failed` : ''}.`); load(); }
     catch (e) { setMsg(e.message); } finally { setBusy(false); }
   }
   async function exportCsv() {
@@ -57,84 +59,77 @@ export default function Orders() {
   return (
     <div>
       <div className="page-head">
-        <h1>অর্ডার</h1>
+        <h1>Orders</h1>
         <div className="head-tools">
           <form className="search" onSubmit={(e) => { e.preventDefault(); load(); }}>
-            <input placeholder="ফোন / নাম / অর্ডার নম্বর" value={filters.search} onChange={(e) => setFilter({ search: e.target.value })} />
-            <button className="btn-primary" type="submit">খুঁজুন</button>
+            <input placeholder="Phone / name / order number" value={filters.search} onChange={(e) => setFilter({ search: e.target.value })} />
+            <button className="btn-primary" type="submit">Search</button>
           </form>
-          <button className="btn-ghost" onClick={exportCsv}>⬇ CSV</button>
+          <button className="btn-ghost" onClick={exportCsv}><Icon name="download" size={16} /> CSV</button>
         </div>
       </div>
 
       <div className="tabs">
-        <button className={'tab' + (filters.status === '' ? ' active' : '')} onClick={() => setFilter({ status: '' })}>সব <span className="tab-count">{totalCount}</span></button>
+        <button className={'tab' + (filters.status === '' ? ' active' : '')} onClick={() => setFilter({ status: '' })}>All <span className="tab-count">{num(totalCount)}</span></button>
         {STATUSES.map((s) => (
           <button key={s.key} className={'tab' + (filters.status === s.key ? ' active' : '')} onClick={() => setFilter({ status: s.key })}>
-            {s.label} <span className="tab-count">{statusCounts[s.key] || 0}</span>
+            {s.label} <span className="tab-count">{num(statusCounts[s.key] || 0)}</span>
           </button>
         ))}
       </div>
 
       {sel.size > 0 && (
         <div className="bulk-bar">
-          <span>{sel.size}টি নির্বাচিত</span>
+          <span>{num(sel.size)} selected</span>
           <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)} className="mini-select">
-            <option value="">স্ট্যাটাস বদলান…</option>
+            <option value="">Change status…</option>
             {STATUSES.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-          <button className="btn-ghost sm" disabled={busy || !bulkStatus} onClick={applyBulkStatus}>প্রয়োগ</button>
-          {isAdmin && <button className="btn-ghost sm" disabled={busy} onClick={bulkToCourier}>🚚 কুরিয়ারে পাঠান</button>}
-          <button className="btn-ghost sm" onClick={() => setSel(new Set())}>বাতিল</button>
+          <button className="btn-ghost sm" disabled={busy || !bulkStatus} onClick={applyBulkStatus}>Apply</button>
+          {isAdmin && <button className="btn-ghost sm" disabled={busy} onClick={bulkToCourier}><Icon name="truck" size={15} /> Send to courier</button>}
+          <button className="btn-ghost sm" onClick={() => setSel(new Set())}>Cancel</button>
         </div>
       )}
-      {msg && <p className="ok-text">{msg}</p>}
-      {error && <p className="err">{error}</p>}
+      <Notice type="ok">{msg}</Notice>
+      <Notice type="err">{error}</Notice>
 
-      {loading ? <p className="muted">লোড হচ্ছে…</p> : orders.length === 0 ? <p className="muted">কোনো অর্ডার নেই।</p> : (
+      {loading ? <p className="muted">Loading…</p> : orders.length === 0 ? <p className="muted">No orders.</p> : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
                 <th><input type="checkbox" checked={sel.size === orders.length && orders.length > 0} onChange={toggleAll} /></th>
-                <th>অর্ডার</th><th>নাম</th><th>ফোন</th><th>অফার</th><th>টোটাল</th><th>স্ট্যাটাস</th><th>কুরিয়ার</th><th>সোর্স</th><th>সময়</th>
+                <th>Order</th><th>Name</th><th>Phone</th><th>Offer</th><th className="num">Total</th><th>Status</th><th>Courier</th><th>Source</th><th>Placed</th>
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => {
-                const st = STATUS_MAP[o.status] || {};
-                return (
-                  <tr key={o._id} className={sel.has(o._id) ? 'row-sel' : ''}>
-                    <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(o._id)} onChange={() => toggle(o._id)} /></td>
-                    <td onClick={() => navigate('/orders/' + o._id)}>#{o.orderNumber}</td>
-                    <td onClick={() => navigate('/orders/' + o._id)}>{o.customer?.name}</td>
-                    <td>{o.customer?.phone}</td>
-                    <td onClick={() => navigate('/orders/' + o._id)}>
-                      <div style={{ fontWeight: 600 }}>{o.offerTitle} <span className="muted">×{o.quantity}</span></div>
-                      {(o.variantSummary || (o.customFields && Object.keys(o.customFields).length > 0)) && (
-                        <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {o.variantSummary ? (
-                            <span className="pill sm" style={{ background: '#2563eb', fontSize: '0.72rem', padding: '2px 7px' }}>
-                              🏷️ {o.variantSummary}
-                            </span>
-                          ) : (
-                            Object.entries(o.customFields || {}).map(([k, v]) => (
-                              <span key={k} className="pill sm" style={{ background: '#2563eb', fontSize: '0.72rem', padding: '2px 7px' }}>
-                                {o.customFieldLabels?.[k] || (k === 'size' ? 'সাইজ' : k === 'color' ? 'কালার' : k)}: {String(v)}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td>{o.total}৳</td>
-                    <td><span className="pill" style={{ background: st.color }}>{st.label}</span></td>
-                    <td>{o.courier?.trackingCode ? <span className="ok-text">{o.courier.trackingCode}</span> : <span className="muted">—</span>}</td>
-                    <td>{o.source}</td>
-                    <td className="muted">{bnDate(o.createdAt)}</td>
-                  </tr>
-                );
-              })}
+              {orders.map((o) => (
+                <tr key={o._id} className={sel.has(o._id) ? 'row-sel' : ''}>
+                  <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(o._id)} onChange={() => toggle(o._id)} /></td>
+                  <td onClick={() => navigate('/orders/' + o._id)}><span className="cell-strong">#{o.orderNumber}</span></td>
+                  <td onClick={() => navigate('/orders/' + o._id)}>{o.customer?.name}</td>
+                  <td>{o.customer?.phone}</td>
+                  <td onClick={() => navigate('/orders/' + o._id)}>
+                    <div style={{ fontWeight: 600 }}>{o.offerTitle} <span className="muted">×{o.quantity}</span></div>
+                    {(o.variantSummary || (o.customFields && Object.keys(o.customFields).length > 0)) && (
+                      <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {o.variantSummary ? (
+                          <Pill color="#2563eb" small>{o.variantSummary}</Pill>
+                        ) : (
+                          Object.entries(o.customFields || {}).map(([k, v]) => (
+                            <Pill key={k} color="#2563eb" small>{fieldLabel(o, k)}: {String(v)}</Pill>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td className="num cell-strong">{money(o.total)}</td>
+                  <td><StatusPill status={o.status} /></td>
+                  <td>{o.courier?.trackingCode ? <span className="ok-text">{o.courier.trackingCode}</span> : <span className="muted">—</span>}</td>
+                  <td>{o.source}</td>
+                  <td className="muted">{fmtDate(o.createdAt)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -142,9 +137,9 @@ export default function Orders() {
 
       {pagination.pages > 1 && (
         <div className="pager">
-          <button disabled={filters.page <= 1} onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}>‹ আগের</button>
-          <span>{filters.page} / {pagination.pages}</span>
-          <button disabled={filters.page >= pagination.pages} onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}>পরের ›</button>
+          <button disabled={filters.page <= 1} onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}>‹ Prev</button>
+          <span>{num(filters.page)} / {num(pagination.pages)}</span>
+          <button disabled={filters.page >= pagination.pages} onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}>Next ›</button>
         </div>
       )}
     </div>

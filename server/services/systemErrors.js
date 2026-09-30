@@ -5,7 +5,7 @@ import { SystemError } from '../models/index.js';
  * Collects server/database errors so admins can see them in the panel
  * (System Status page + banner) instead of only in server logs.
  *
- *  - classify(): turns raw Mongo/Node errors into a Bangla title + what-to-do
+ *  - classify(): turns raw Mongo/Node errors into an English title + what-to-do
  *    hint + severity (e.g. storage quota full → critical).
  *  - reportError(): keeps a de-duplicated ring buffer in memory (works even
  *    while the DB is down) and persists to `system_errors` best-effort.
@@ -28,16 +28,16 @@ export function classify(err) {
     return {
       kind: 'storage_high',
       severity: 'warning',
-      title: 'ডেটাবেসের স্টোরেজ প্রায় ভরে গেছে (৯০%+)',
-      hint: 'ভরে গেলে নতুন অর্ডার সেভ হবে না। এখনই Atlas প্ল্যান আপগ্রেড করুন বা পুরনো ডেটা মুছুন।',
+      title: 'Database storage is almost full (90%+)',
+      hint: 'Once it fills up, new orders will not be saved. Upgrade the Atlas plan now or delete old data.',
     };
   }
   if (code === 18 || /authentication failed|bad auth/i.test(msg)) {
     return {
       kind: 'auth_failed',
       severity: 'critical',
-      title: 'ডেটাবেসে লগইন ব্যর্থ (ইউজার/পাসওয়ার্ড ভুল)',
-      hint: 'সার্ভারের .env ফাইলে MONGODB_URI-এর ইউজারনেম ও পাসওয়ার্ড Atlas-এর সাথে মিলিয়ে দেখুন, তারপর অ্যাপ রিস্টার্ট করুন।',
+      title: 'Database login failed (wrong username/password)',
+      hint: 'Check that the username and password in MONGODB_URI in the server .env file match Atlas, then restart the app.',
     };
   }
   // Atlas uses code 8000 (AtlasError) for several failures (auth too), so
@@ -46,8 +46,8 @@ export function classify(err) {
     return {
       kind: 'storage_full',
       severity: 'critical',
-      title: 'ডেটাবেসের স্টোরেজ ভরে গেছে — নতুন অর্ডার সেভ হচ্ছে না!',
-      hint: 'MongoDB Atlas-এ প্ল্যান আপগ্রেড করুন অথবা অপ্রয়োজনীয় পুরনো ডেটা মুছুন। এটা ঠিক না করা পর্যন্ত অ্যাড বন্ধ রাখুন।',
+      title: 'Database storage is full — new orders are not being saved!',
+      hint: 'Upgrade the plan on MongoDB Atlas or delete unnecessary old data. Pause your ads until this is fixed.',
     };
   }
   if (
@@ -57,51 +57,51 @@ export function classify(err) {
     return {
       kind: 'db_unreachable',
       severity: 'critical',
-      title: 'ডেটাবেসের সাথে সংযোগ নেই',
-      hint: 'Atlas-এ ক্লাস্টার চালু আছে কিনা এবং Network Access-এ সার্ভারের IP অনুমোদিত আছে কিনা দেখুন। সংযোগ ফিরলে অ্যাপ নিজেই আবার যুক্ত হবে।',
+      title: 'No connection to the database',
+      hint: 'Check that the cluster is running on Atlas and that the server IP is allowed under Network Access. The app will reconnect on its own once the connection is back.',
     };
   }
   if (/MongoNetworkTimeoutError|MongoOperationTimeoutError/.test(name) || /buffering timed out|timed out|ETIMEDOUT/i.test(msg)) {
     return {
       kind: 'db_timeout',
       severity: 'error',
-      title: 'ডেটাবেস সময়মতো সাড়া দিচ্ছে না',
-      hint: 'ট্রাফিক বেশি হলে ফ্রি প্ল্যানের লিমিট (সেকেন্ডে ১০০ অপারেশন) ছুঁয়ে যেতে পারে। বারবার হলে Atlas প্ল্যান আপগ্রেড বিবেচনা করুন।',
+      title: 'The database is not responding in time',
+      hint: 'Under heavy traffic you may hit the free-plan limit (100 operations per second). If it keeps happening, consider upgrading the Atlas plan.',
     };
   }
   if (code === 11000) {
     return {
       kind: 'duplicate_key',
       severity: 'warning',
-      title: 'একই তথ্য দুইবার সেভ করার চেষ্টা (ডুপ্লিকেট)',
-      hint: 'সাধারণত একই রিকোয়েস্ট দুইবার আসলে হয়। বারবার হলে ডেভেলপারকে জানান।',
+      title: 'Tried to save the same data twice (duplicate)',
+      hint: 'This usually happens when the same request arrives twice. If it keeps happening, tell the developer.',
     };
   }
   if (name === 'ValidationError' || name === 'CastError') {
     return {
       kind: 'invalid_data',
       severity: 'warning',
-      title: 'ডেটাবেস অবৈধ তথ্য গ্রহণ করেনি',
-      hint: 'ফর্ম/সেটিংসে ভুল মান থাকতে পারে। বারবার হলে ডেভেলপারকে জানান।',
+      title: 'The database rejected invalid data',
+      hint: 'There may be a wrong value in a form or setting. If it keeps happening, tell the developer.',
     };
   }
   if (/Mongo/.test(name)) {
     return {
       kind: 'db_error',
       severity: 'error',
-      title: 'ডেটাবেস ত্রুটি',
-      hint: 'নিচের টেকনিক্যাল মেসেজসহ ডেভেলপারকে জানান।',
+      title: 'Database error',
+      hint: 'Send the technical message below to the developer.',
     };
   }
   return {
     kind: 'server_error',
     severity: 'error',
-    title: 'সার্ভারে অপ্রত্যাশিত ত্রুটি',
-    hint: 'নিচের টেকনিক্যাল মেসেজসহ ডেভেলপারকে জানান।',
+    title: 'Unexpected server error',
+    hint: 'Send the technical message below to the developer.',
   };
 }
 
-/** Short Bangla message safe to show to API clients (admin panel/login). */
+/** Short English message safe to show to API clients (admin panel/login). */
 export function publicMessageFor(err) {
   const c = classify(err);
   return ['storage_full', 'auth_failed', 'db_unreachable', 'db_timeout'].includes(c.kind) ? c.title : null;

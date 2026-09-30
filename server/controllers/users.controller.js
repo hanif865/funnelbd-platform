@@ -15,11 +15,11 @@ export async function listUsers(req, res, next) {
 export async function createUser(req, res, next) {
   try {
     const { name, email, password, role } = req.body || {};
-    if (!name || !email || !password) return res.status(400).json({ error: 'নাম, ইমেইল, পাসওয়ার্ড দিন।' });
-    if (String(password).length < 6) return res.status(400).json({ error: 'পাসওয়ার্ড অন্তত ৬ অক্ষর।' });
-    if (!ADMIN_ROLES.includes(role)) return res.status(400).json({ error: 'অবৈধ রোল।' });
+    if (!name || !email || !password) return res.status(400).json({ error: 'Enter name, email and password.' });
+    if (String(password).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    if (!ADMIN_ROLES.includes(role)) return res.status(400).json({ error: 'Invalid role.' });
     const em = String(email).toLowerCase().trim();
-    if (await Admin.findOne({ email: em })) return res.status(400).json({ error: 'এই ইমেইলে ইউজার আছে।' });
+    if (await Admin.findOne({ email: em })) return res.status(400).json({ error: 'A user with this email already exists.' });
 
     const passwordHash = await bcrypt.hash(String(password), 10);
     const user = await Admin.create({ name: String(name).trim(), email: em, passwordHash, role, active: true });
@@ -34,14 +34,14 @@ export async function updateUser(req, res, next) {
   try {
     const { name, role, active } = req.body || {};
     const user = await Admin.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'ইউজার নেই।' });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
 
     // Guard: don't let the last active admin be demoted/deactivated.
     const isSelf = String(user._id) === String(req.admin._id);
     const demoting = (role && role !== 'admin') || active === false;
     if (user.role === 'admin' && demoting) {
       const activeAdmins = await Admin.countDocuments({ role: 'admin', active: true });
-      if (activeAdmins <= 1) return res.status(400).json({ error: 'অন্তত একজন সক্রিয় অ্যাডমিন থাকতে হবে।' });
+      if (activeAdmins <= 1) return res.status(400).json({ error: 'At least one active admin is required.' });
     }
 
     if (name !== undefined) user.name = String(name).trim();
@@ -58,9 +58,9 @@ export async function updateUser(req, res, next) {
 export async function resetPassword(req, res, next) {
   try {
     const { password } = req.body || {};
-    if (!password || String(password).length < 6) return res.status(400).json({ error: 'পাসওয়ার্ড অন্তত ৬ অক্ষর।' });
+    if (!password || String(password).length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
     const user = await Admin.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'ইউজার নেই।' });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
     user.passwordHash = await bcrypt.hash(String(password), 10);
     await user.save();
     res.json({ ok: true });
@@ -73,11 +73,11 @@ export async function resetPassword(req, res, next) {
 export async function deleteUser(req, res, next) {
   try {
     const user = await Admin.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'ইউজার নেই।' });
-    if (String(user._id) === String(req.admin._id)) return res.status(400).json({ error: 'নিজেকে ডিলিট করা যাবে না।' });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (String(user._id) === String(req.admin._id)) return res.status(400).json({ error: 'You cannot delete yourself.' });
     if (user.role === 'admin') {
       const admins = await Admin.countDocuments({ role: 'admin', active: true });
-      if (admins <= 1) return res.status(400).json({ error: 'শেষ অ্যাডমিন ডিলিট করা যাবে না।' });
+      if (admins <= 1) return res.status(400).json({ error: 'The last admin cannot be deleted.' });
     }
     await user.deleteOne();
     res.json({ ok: true });

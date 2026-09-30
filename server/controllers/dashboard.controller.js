@@ -93,16 +93,16 @@ export async function getDashboard(req, res, next) {
 
     // Section dwell time & exit drop-off analytics (30-day aggregate).
     const SECTION_LABELS = {
-      checkout: 'চেকআউট ফর্ম ও প্যাকেজ',
-      hero_showcase: 'প্রোডাক্ট গ্যালারি ও শোকেস',
-      benefits: 'উপকারিতা ও বৈশিষ্ট্য',
-      reviews: 'কাস্টমার রিভিউ',
-      size_chart: 'সাইজ চার্ট গাইড',
-      usage: 'ব্যবহারের নিয়মাবলী',
-      product_video: 'ভিডিও ডেমো',
-      top_banner: 'টপ ব্যানার',
-      info_bar: 'ইনফো বার',
-      footer: 'ফুটার ও হেল্পলাইন',
+      checkout: 'Checkout form & packages',
+      hero_showcase: 'Product gallery & showcase',
+      benefits: 'Benefits & features',
+      reviews: 'Customer reviews',
+      size_chart: 'Size chart guide',
+      usage: 'Usage instructions',
+      product_video: 'Video demo',
+      top_banner: 'Top banner',
+      info_bar: 'Info bar',
+      footer: 'Footer & helpline',
     };
 
     const sectionStats = await DailyStat.find({ date: { $gte: monthDate } }).lean();

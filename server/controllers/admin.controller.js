@@ -11,14 +11,14 @@ export async function login(req, res, next) {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) {
-      return res.status(400).json({ error: 'ইমেইল ও পাসওয়ার্ড দিন।' });
+      return res.status(400).json({ error: 'Enter email and password.' });
     }
     const admin = await Admin.findOne({ email: String(email).toLowerCase().trim() });
     if (!admin || !admin.active) {
-      return res.status(401).json({ error: 'ভুল ইমেইল বা পাসওয়ার্ড।' });
+      return res.status(401).json({ error: 'Wrong email or password.' });
     }
     const ok = await bcrypt.compare(password, admin.passwordHash);
-    if (!ok) return res.status(401).json({ error: 'ভুল ইমেইল বা পাসওয়ার্ড।' });
+    if (!ok) return res.status(401).json({ error: 'Wrong email or password.' });
 
     const token = signAdminToken(admin);
     res.cookie(ADMIN_COOKIE_NAME, token, {
@@ -101,7 +101,7 @@ export async function listOrders(req, res, next) {
 export async function getOrder(req, res, next) {
   try {
     const order = await Order.findById(req.params.id).lean();
-    if (!order) return res.status(404).json({ error: 'অর্ডার পাওয়া যায়নি।' });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     const history = await Order.find({
       'customer.phone': order.customer.phone,
@@ -122,10 +122,10 @@ export async function updateStatus(req, res, next) {
   try {
     const { status } = req.body || {};
     if (!ORDER_STATUSES.includes(status)) {
-      return res.status(400).json({ error: 'অবৈধ স্ট্যাটাস।' });
+      return res.status(400).json({ error: 'Invalid status.' });
     }
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: 'অর্ডার পাওয়া যায়নি।' });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     order.status = status;
     order.statusHistory.push({ status, by: req.admin.name, at: new Date() });
@@ -140,10 +140,10 @@ export async function updateStatus(req, res, next) {
 export async function addNote(req, res, next) {
   try {
     const text = String(req.body?.text || '').trim();
-    if (!text) return res.status(400).json({ error: 'নোট খালি হতে পারে না।' });
+    if (!text) return res.status(400).json({ error: 'A note cannot be empty.' });
 
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: 'অর্ডার পাওয়া যায়নি।' });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     order.notes.push({ text, by: req.admin.name, at: new Date() });
     await order.save();
@@ -157,13 +157,13 @@ export async function addNote(req, res, next) {
 export async function sendCourier(req, res, next) {
   try {
     const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ error: 'অর্ডার পাওয়া যায়নি।' });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
     if (order.courier?.consignmentId) {
-      return res.status(400).json({ error: 'এই অর্ডার ইতিমধ্যে কুরিয়ারে পাঠানো হয়েছে।' });
+      return res.status(400).json({ error: 'This order has already been sent to the courier.' });
     }
 
     const result = await sendToCourier(order);
-    if (!result.ok) return res.status(502).json({ error: result.error || 'কুরিয়ারে পাঠানো যায়নি।', response: result.response });
+    if (!result.ok) return res.status(502).json({ error: result.error || 'Could not send to the courier.', response: result.response });
 
     order.courier = { provider: result.provider, consignmentId: result.consignmentId, trackingCode: result.trackingCode };
     if (order.status === 'new' || order.status === 'confirmed') {
@@ -181,7 +181,7 @@ export async function sendCourier(req, res, next) {
 export async function fraudCheckOrder(req, res, next) {
   try {
     const order = await Order.findById(req.params.id).select('customer.phone').lean();
-    if (!order) return res.status(404).json({ error: 'অর্ডার পাওয়া যায়নি।' });
+    if (!order) return res.status(404).json({ error: 'Order not found.' });
     res.json(await fraudCheck(order.customer.phone));
   } catch (err) {
     next(err);
@@ -193,7 +193,7 @@ export async function bulkStatus(req, res, next) {
   try {
     const { ids = [], status } = req.body || {};
     if (!ORDER_STATUSES.includes(status) || !Array.isArray(ids) || !ids.length) {
-      return res.status(400).json({ error: 'অবৈধ অনুরোধ।' });
+      return res.status(400).json({ error: 'Invalid request.' });
     }
     await Order.updateMany(
       { _id: { $in: ids } },

@@ -22,13 +22,13 @@ export async function optimizeToWebp(input) {
   try {
     meta = await sharp(input).metadata();
   } catch {
-    throw new ImageProcessingError('ছবিটি পড়া যায়নি — ফাইলটি সঠিক ছবি নয় বা ফরম্যাট সাপোর্টেড নয়।');
+    throw new ImageProcessingError('Could not read the image — the file is not a valid image or the format is unsupported.');
   }
   if (meta.format === 'heif' && meta.compression === 'hevc') {
-    throw new ImageProcessingError('iPhone HEIC ফরম্যাট সাপোর্টেড নয় — ফোনের Safari/Chrome থেকে আপলোড করুন (নিজেই JPG হয়ে যায়) অথবা JPG/PNG দিন।');
+    throw new ImageProcessingError('iPhone HEIC format is not supported — upload from Safari/Chrome on the phone (it converts to JPG automatically) or use JPG/PNG.');
   }
   if (meta.format === 'svg') {
-    throw new ImageProcessingError('SVG আপলোড করা যাবে না — PNG/JPG দিন।');
+    throw new ImageProcessingError('SVG cannot be uploaded — use PNG/JPG.');
   }
 
   const animated = (meta.pages || 1) > 1 && ['gif', 'webp'].includes(meta.format);
@@ -46,7 +46,7 @@ export async function optimizeToWebp(input) {
     if (data.length > input.length) ({ data, info } = await encode(FALLBACK_QUALITY));
     return { buffer: data, width: info.width, height: info.pageHeight || info.height };
   } catch {
-    throw new ImageProcessingError('ছবিটি প্রসেস করা যায়নি — অন্য ফরম্যাটে (JPG/PNG) চেষ্টা করুন।');
+    throw new ImageProcessingError('Could not process the image — try another format (JPG/PNG).');
   }
 }
 
