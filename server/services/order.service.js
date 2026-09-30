@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { Order, Counter } from '../models/index.js';
+import { Order, Counter, IncompleteOrder } from '../models/index.js';
 import { getSettings } from './settings.service.js';
 import { getCatalog, findActiveOffer, findActiveZone } from './catalog.cache.js';
 import { normalizePhone, isValidBDPhone } from '../utils/phone.js';
@@ -211,6 +211,18 @@ export async function createOrder(payload, meta = {}) {
     },
     source: meta.source || deriveSource(t),
   });
+
+  // The sale is now a real order, so it must not linger in the recovery
+  // workflow. Convert every still-recoverable incomplete entry for this phone
+  // — not just the current session's — so an abandoned checkout from an earlier
+  // visit (a different session/cookie, same number) can't show up in both the
+  // Incomplete list and Orders at once. Fire-and-forget; never blocks the order.
+  if (customer.phone) {
+    IncompleteOrder.updateMany(
+      { phone: customer.phone, status: { $in: ['new', 'called'] } },
+      { $set: { status: 'converted' } }
+    ).catch(() => {});
+  }
 
   return order;
 }
