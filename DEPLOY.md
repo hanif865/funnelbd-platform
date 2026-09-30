@@ -13,7 +13,7 @@ DB/Redis ম্যানেজড ব্যবহার করো: **MongoDB Atl
 ## ১. কোড + বিল্ড
 ```bash
 git clone <repo> /var/www/funnelbd && cd /var/www/funnelbd
-npm ci
+npm ci --omit=dev                                 # dev টুল (mongodb-memory-server) সার্ভারে লাগে না
 npm run admin:install && npm run admin:build     # React → admin-panel/dist
 cp .env.example .env                              # মান বসাও (নিচে দেখো)
 npm run seed                                      # শুধু প্রথমবার (প্রোডাক্ট থাকলে নিজেই থেমে যাবে; প্রোডাকশনে শক্ত SEED_ADMIN_PASSWORD লাগবে)
@@ -103,7 +103,7 @@ sudo nginx -t && sudo systemctl reload nginx
 - অন্য প্ল্যানে গেলে `.env`-এ `DB_STORAGE_LIMIT_MB` বসাও (ডিফল্ট ৫১২)।
 
 ## ৬. ব্যাকআপ
-Atlas-এ অটোমেটেড ব্যাকআপ আছে। অতিরিক্ত লোকাল ডাম্প:
+Atlas ফ্রি (M0)-তে অটোমেটেড ব্যাকআপ **নেই** — এই ডাম্পই ভরসা (সার্ভারে MongoDB Database Tools ইনস্টল করতে হবে):
 ```bash
 bash scripts/backup.sh          # mongodump → ./backups/ (cron-এ রোজ চালাও)
 ```
@@ -111,7 +111,7 @@ crontab: `0 3 * * * cd /var/www/funnelbd && bash scripts/backup.sh`
 
 ## ৭. আপডেট ডিপ্লয়
 ```bash
-git pull && npm ci && npm run admin:build
+git pull && npm ci --omit=dev && npm run admin:install && npm run admin:build
 pm2 reload ecosystem.config.cjs  # zero-downtime
 # public/js বা css বদলালে Cloudflare → Caching → Purge করো (ব্রাউজারে ৭ দিনের ক্যাশ)
 ```
