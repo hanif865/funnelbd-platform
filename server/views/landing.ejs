@@ -381,20 +381,18 @@
   </section>
 
   <!-- ── 4B. PRODUCT VIDEO (Optional) ── -->
-  <% if (c.videoUrl) { 
-       let embedUrl = c.videoUrl;
-       if (embedUrl.includes('youtube.com/watch?v=')) {
-         embedUrl = embedUrl.replace('watch?v=', 'embed/');
-       } else if (embedUrl.includes('youtu.be/')) {
-         embedUrl = embedUrl.replace('youtu.be/', 'youtube.com/embed/');
-       } else if (embedUrl.includes('youtube.com/shorts/')) {
-         embedUrl = embedUrl.replace('youtube.com/shorts/', 'youtube.com/embed/');
-       }
+  <%
+     // Pull the 11-char video id out of any YouTube link shape (watch?v=,
+     // youtu.be/, shorts/, embed/, live/ — with or without ?si=/&t= extras).
+     var ytMatch = (c.videoUrl || '').match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+     var embedUrl = ytMatch ? 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0' : '';
   %>
+  <% if (embedUrl) { %>
     <section class="fk-video-section" data-section="product_video">
       <div class="fk-container">
         <div class="fk-video-wrap shine-container">
-          <iframe src="<%= embedUrl %>" title="Product Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <%# referrerpolicy: YouTube refuses embeds without a Referer (Error 153). loading=lazy keeps the ~1MB player off the critical path. %>
+          <iframe src="<%= embedUrl %>" title="Product Video" frameborder="0" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
         </div>
       </div>
     </section>

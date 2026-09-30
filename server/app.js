@@ -29,7 +29,16 @@ export function createApp() {
 
   // Security headers. CSP is left off in Phase 1 (landing uses some inline
   // styles); it will be tightened during Phase 4 hardening.
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+  // Referrer: helmet's default `no-referrer` breaks YouTube embeds (Error 153)
+  // and hides the landing page origin from ad platforms; send only the origin
+  // cross-site (never full paths/query strings).
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginEmbedderPolicy: false,
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    })
+  );
   app.use(compression()); // gzip responses (HTML/JS/CSS/JSON) for faster mobile loads
   app.use(morgan(config.isProd ? 'combined' : 'dev'));
   app.use(express.json({ limit: '256kb' }));
