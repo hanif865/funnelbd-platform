@@ -62,6 +62,15 @@ export function useSystemHealth() {
   return { health, unreachable, unseen, refresh };
 }
 
+/**
+ * Connection-type errors are over once the database is connected again; they
+ * stay in the list as history but must not read as an ongoing outage.
+ */
+const CONNECTION_KINDS = ['db_unreachable', 'db_timeout', 'auth_failed'];
+export function isRecoveredConnectionError(e) {
+  return CONNECTION_KINDS.includes(e.kind);
+}
+
 /** Top-of-page warning banner. Renders nothing when all is well. */
 export function SystemBanner({ health, unreachable, unseen }) {
   let level = null;
@@ -74,9 +83,17 @@ export function SystemBanner({ health, unreachable, unseen }) {
     level = 'critical';
     const dbErr = (health.errors || []).find((e) => e.source === 'db' || ['db_unreachable', 'auth_failed'].includes(e.kind));
     text = (dbErr?.title || 'ডেটাবেসের সাথে সংযোগ নেই') + ' — নতুন অর্ডার সেভ হচ্ছে না!';
-  } else if (unseen.some((e) => e.severity === 'critical')) {
+  } else if (unseen.some((e) => e.severity === 'critical' && !isRecoveredConnectionError(e))) {
+    // A critical problem that being connected doesn't fix (e.g. storage full).
     level = 'critical';
-    text = unseen.find((e) => e.severity === 'critical').title;
+    text = unseen.find((e) => e.severity === 'critical' && !isRecoveredConnectionError(e)).title;
+  } else if (unseen.some(isRecoveredConnectionError)) {
+    // We got here, so the DB is connected NOW: the outage is over. Say so —
+    // showing the raw "no connection" title would read as an ongoing problem.
+    const e = unseen.find(isRecoveredConnectionError);
+    const at = new Date(e.lastAt).toLocaleTimeString('bn-BD', { hour: 'numeric', minute: '2-digit' });
+    level = 'warning';
+    text = `ডেটাবেস সংযোগ সাময়িকভাবে বিচ্ছিন্ন হয়েছিল (${at})${e.count > 1 ? ` ×${e.count}` : ''} — এখন আবার সংযুক্ত, সব ঠিক আছে।`;
   } else if (health?.storage?.percent >= 80) {
     level = health.storage.percent >= 90 ? 'critical' : 'warning';
     text = `ডেটাবেসের স্টোরেজ ${health.storage.percent}% ভরে গেছে (${health.storage.usedMb}MB / ${health.storage.limitMb}MB)।`;

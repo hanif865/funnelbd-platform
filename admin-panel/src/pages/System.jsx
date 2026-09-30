@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { getSeenAt, markErrorsSeen } from '../components/SystemHealth.jsx';
+import { getSeenAt, markErrorsSeen, isRecoveredConnectionError } from '../components/SystemHealth.jsx';
 
 const DB_STATE = {
   connected: { label: 'সংযুক্ত', cls: 'ok' },
@@ -100,16 +100,24 @@ export default function System() {
             const sev = SEVERITY[e.severity] || SEVERITY.error;
             const isNew = new Date(e.lastAt).getTime() > seenAt;
             const id = String(e._id);
+            // Connection errors are history once the DB is connected again.
+            const recovered = db?.state === 'connected' && isRecoveredConnectionError(e);
             return (
-              <div key={id} className={'sys-item ' + sev.cls + (isNew ? ' new' : '')}>
+              <div key={id} className={'sys-item ' + (recovered ? 'recovered' : sev.cls) + (isNew ? ' new' : '')}>
                 <div className="sys-item-head" onClick={() => setOpen(open === id ? null : id)}>
-                  <span className={'pill sys-pill ' + sev.cls}>{sev.label}</span>
+                  {recovered
+                    ? <span className="pill sys-pill ok">✓ মিটে গেছে</span>
+                    : <span className={'pill sys-pill ' + sev.cls}>{sev.label}</span>}
                   <strong>{e.title}</strong>
                   {e.count > 1 && <span className="muted"> ×{e.count}</span>}
                   {isNew && <span className="sys-new">নতুন</span>}
                   <span className="muted sys-time">{fmt(e.lastAt)}</span>
                 </div>
-                <div className="sys-hint">👉 {e.hint}</div>
+                <div className="sys-hint">
+                  {recovered
+                    ? 'ℹ️ সংযোগ সাময়িকভাবে বিচ্ছিন্ন হয়েছিল, অ্যাপ নিজেই আবার যুক্ত হয়েছে — কিছু করতে হবে না। দিনে বারবার হলে Atlas প্ল্যান আপগ্রেড বিবেচনা করুন।'
+                    : '👉 ' + e.hint}
+                </div>
                 {open === id ? (
                   <pre className="sys-tech">
                     {`সময় (প্রথম): ${fmt(e.createdAt)}\nসময় (শেষ): ${fmt(e.lastAt)}\nজায়গা: ${e.source}${e.path ? ' · ' + e.path : ''} · ${e.process}\n${e.code != null ? 'কোড: ' + e.code + '\n' : ''}মেসেজ: ${e.message}`}
