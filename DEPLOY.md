@@ -103,11 +103,19 @@ sudo nginx -t && sudo systemctl reload nginx
 - অন্য প্ল্যানে গেলে `.env`-এ `DB_STORAGE_LIMIT_MB` বসাও (ডিফল্ট ৫১২)।
 
 ## ৬. ব্যাকআপ
-Atlas ফ্রি (M0)-তে অটোমেটেড ব্যাকআপ **নেই** — এই ডাম্পই ভরসা (সার্ভারে MongoDB Database Tools ইনস্টল করতে হবে):
+Atlas ফ্রি (M0) বা নিজের সার্ভারের MongoDB — কোনোটাতেই অটোমেটেড ব্যাকআপ **নেই**। `scripts/backup.sh` ডেটাবেস ডাম্প + আপলোড করা ছবি `./backups/<সময়>/`-এ রাখে (১৪ দিন):
 ```bash
-bash scripts/backup.sh          # mongodump → ./backups/ (cron-এ রোজ চালাও)
+bash scripts/backup.sh
 ```
-crontab: `0 3 * * * cd /var/www/funnelbd && bash scripts/backup.sh`
+crontab (রোজ রাত ৩টা): `0 3 * * * cd /var/www/funnelbd && bash scripts/backup.sh >> backups/backup.log 2>&1`
+
+**সার্ভারের বাইরে কপি (জরুরি):** rclone ইনস্টল করে `.env`-এ `BACKUP_REMOTE=gdrive:funnelbd-backups` দিলে প্রতিটা ব্যাকআপ সেখানেও যায়। শুধু সার্ভারে থাকা ব্যাকআপ ডিস্ক নষ্ট হলে কাজে আসবে না।
+
+রিস্টোর: `mongorestore --uri="$MONGODB_URI" --gzip --archive=backups/<সময়>/funnelbd.archive.gz --drop` এবং `tar -xzf backups/<সময়>/uploads.tar.gz -C public`
+
+### নিজের সার্ভারে MongoDB চালালে
+- `/etc/mongod.conf`: `bindIp: 127.0.0.1`, `security.authorization: enabled`, `wiredTiger.engineConfig.cacheSizeGB: 0.5` (অন্য সাইটের সাথে RAM ভাগাভাগি)।
+- `.env`: `MONGODB_URI=mongodb://funnelbd:<পাসওয়ার্ড>@127.0.0.1:27017/funnelbd?authSource=funnelbd` এবং `DB_STORAGE_LIMIT_MB` বাড়াও।
 
 ## ৭. আপডেট ডিপ্লয়
 ```bash
