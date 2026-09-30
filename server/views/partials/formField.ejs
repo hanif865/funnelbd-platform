@@ -20,11 +20,11 @@
 
     <% if (field.type === 'textarea') { %>
       <textarea id="f_<%= field.name %>" name="<%= field.name %>" rows="3"
-        placeholder="<%= field.placeholder || '' %>" <%= req %>></textarea>
+        placeholder="<%= field.placeholder || field.label %>" <%= req %>></textarea>
 
     <% } else if (field.type === 'select') { %>
       <select id="f_<%= field.name %>" name="<%= field.name %>" <%= req %> class="wcf-attr-select">
-        <option value="">-- <%= field.label %> নির্বাচন করুন --</option>
+        <option value="">-- <%= field.label %> --</option>
         <% (field.options || []).forEach(function(opt){ %>
           <option value="<%= opt %>"><%= opt %></option>
         <% }); %>
@@ -42,7 +42,7 @@
 
     <% } else { %>
       <input id="f_<%= field.name %>" type="<%= field.type === 'number' ? 'number' : (field.name === 'phone' ? 'tel' : 'text') %>"
-        name="<%= field.name %>" placeholder="<%= field.placeholder || '' %>"
+        name="<%= field.name %>" placeholder="<%= field.placeholder || field.label %>"
         <%= field.name === 'phone' ? 'inputmode="numeric" maxlength="11"' : '' %> <%= req %> />
     <% } %>
   <% } %>

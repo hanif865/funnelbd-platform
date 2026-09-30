@@ -1961,3 +1961,68 @@ a {
    .btn-call rule adds margin-top for the thank-you screen). */
 .cta-pair-wrap { align-items: center; }
 .cta-pair-wrap .btn-call, .cta-pair-wrap .btn-whatsapp { margin-top: 0; }
+
+/* ══ Mobile: whole order form fits one phone screen ═══════════════════
+ * Goal: package → phone → name → address → size/colour → delivery → total →
+ * "অর্ডার কনফার্ম" button all visible without scrolling (~360×600 viewport).
+ * Section headings and field labels are hidden visually (icons + placeholders
+ * carry the meaning; labels stay available to screen readers); the review
+ * table keeps only delivery/discount/total; COD box + privacy text collapse
+ * to one line. Desktop is unchanged. */
+.fk-cod-mini { display: none; }
+@media (max-width: 600px) {
+  .rainbow-banner { padding: 6px 10px !important; font-size: 15px !important; line-height: 1.25 !important; }
+  .fk-checkout-section { padding-top: 6px !important; }
+  .fk-checkout-header { margin-bottom: 6px !important; }
+  .fk-checkout-header .section-pill-badge { display: none !important; }
+  .fk-checkout-main-title { font-size: 15px !important; margin: 0 !important; line-height: 1.3 !important; }
+
+  #orderForm #your_products_heading,
+  #orderForm .wcf-customer-info-title,
+  #orderForm .wcf-shipping-methods-title,
+  #orderForm #order_review_heading { display: none !important; }
+
+  #orderForm .wcf-product-option-wrap { margin-bottom: 8px !important; }
+  #orderForm .wcf-qty-options.wcf-grid-2-col { gap: 8px !important; }
+  #orderForm .wcf-qty-row { padding: 6px 8px !important; }
+  #orderForm .wcf-item-image img, #orderForm .wcf-item-placeholder { width: 38px !important; height: 38px !important; }
+
+  /* Fields: label hidden (sr-only), tighter rows */
+  #orderForm .field:not(.field-radio):not(.field-checkbox) > .field-label {
+    position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important;
+    margin: -1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; white-space: nowrap !important; border: 0 !important;
+  }
+  #orderForm .woocommerce-billing-fields__field-wrapper { gap: 8px !important; row-gap: 8px !important; }
+  #orderForm .field { margin: 0 !important; }
+  #orderForm .field input:not([type="radio"]):not([type="checkbox"]),
+  #orderForm .field select { height: 42px !important; min-height: 42px !important; padding: 8px 12px !important; font-size: 15px !important; }
+  #orderForm .field textarea { height: 58px !important; min-height: 58px !important; padding: 8px 12px !important; font-size: 15px !important; resize: vertical; }
+  #orderForm .field-error:not(:empty) { margin-top: 2px !important; }
+
+  /* Delivery: two compact one-line options */
+  #orderForm .wcf-shipping-methods-wrapper { margin: 8px 0 0 !important; padding: 0 !important; border: 0 !important; }
+  #orderForm .woocommerce-shipping-methods.zones { gap: 8px !important; }
+  #orderForm .wcf-shipping-method-item { padding: 0 !important; }
+  #orderForm .wcf-shipping-method-item label { padding: 8px 6px !important; min-height: 0 !important; flex-direction: row !important; gap: 4px !important; justify-content: center; font-size: 13.5px !important; }
+
+  /* Review: only delivery / discount / total + the button */
+  #orderForm .wcf-form-columns { gap: 8px !important; }
+  #orderForm .wcf-order-wrap { padding: 8px 10px !important; margin-top: 8px !important; }
+  #orderForm .woocommerce-checkout-review-order-table thead,
+  #orderForm .woocommerce-checkout-review-order-table .cart_item,
+  #orderForm .woocommerce-checkout-review-order-table .cart-subtotal,
+  #orderForm #payment,
+  #orderForm .woocommerce-privacy-policy-text { display: none !important; }
+  #orderForm .woocommerce-checkout-review-order-table { margin: 0 !important; }
+  #orderForm .woocommerce-checkout-review-order-table th,
+  #orderForm .woocommerce-checkout-review-order-table td { padding: 3px 0 !important; font-size: 14px !important; border: 0 !important; }
+  #orderForm .fk-discount-applied-banner { padding: 6px 8px !important; margin-bottom: 6px !important; font-size: 13px !important; }
+  #orderForm .fk-cod-mini { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0 !important; font-size: 12.5px; color: #15803d; font-weight: 600; }
+  #orderForm #submitBtn { margin-top: 4px !important; padding: 12px 10px !important; font-size: 17px !important; }
+  #orderForm .form-message:empty { display: none; }
+}
+@media (max-width: 600px) {
+  /* room for the "বেস্ট ডিল" badge that sits above the offer card */
+  #orderForm .wcf-product-option-wrap { padding-top: 10px !important; }
+  #orderForm .woocommerce-checkout-review-order-table th { text-align: left !important; font-weight: 600 !important; }
+}
