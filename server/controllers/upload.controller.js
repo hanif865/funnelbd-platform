@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { nanoid } from 'nanoid';
-import { optimizeToWebp, ImageProcessingError } from '../services/image.service.js';
+import { optimizeToWebpSet, ImageProcessingError } from '../services/image.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.resolve(__dirname, '../../public/uploads');
@@ -37,9 +37,15 @@ export function handleUpload(req, res, next) {
     if (!req.file) return res.status(400).json({ error: 'No file received.' });
 
     try {
-      const { buffer, width, height } = await optimizeToWebp(req.file.buffer);
-      const filename = `${Date.now()}-${nanoid(8)}.webp`;
+      const { buffer, width, height, variants } = await optimizeToWebpSet(req.file.buffer);
+      const id = `${Date.now()}-${nanoid(8)}`;
+      const filename = `${id}.webp`;
       await fs.writeFile(path.join(UPLOAD_DIR, filename), buffer);
+      // Responsive variants (NAME-<w>.webp) for srcset. Best-effort — a failed
+      // variant just means the browser falls back to the main image.
+      await Promise.all(
+        variants.map((v) => fs.writeFile(path.join(UPLOAD_DIR, `${id}-${v.width}.webp`), v.buffer).catch(() => {}))
+      );
 
       res.status(201).json({
         ok: true,

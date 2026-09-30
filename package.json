@@ -16,6 +16,7 @@
     "seed": "node server/scripts/seed.js",
     "incomplete:dedupe": "node server/scripts/dedupe-incomplete.js",
     "images:optimize": "node server/scripts/optimize-images.js",
+    "images:variants": "node server/scripts/regenerate-image-variants.js",
     "admin:dev": "npm --prefix admin-panel run dev",
     "admin:build": "npm --prefix admin-panel run build",
     "admin:install": "npm --prefix admin-panel install"

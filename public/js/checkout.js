@@ -62,8 +62,13 @@
       setText('reviewProdName', offer.title);
       setText('reviewProdQty', '× ' + toBn(state.qty));
       var reviewImg = document.getElementById('reviewProdImg');
-      if (reviewImg && (offer.image || (DATA.productImages && DATA.productImages[0]))) {
-        reviewImg.src = offer.image || DATA.productImages[0];
+      var reviewSrc = offer.image || (DATA.productImages && DATA.productImages[0]);
+      if (reviewImg && reviewSrc) {
+        // This thumbnail is ~48px — use the 240px variant when available and
+        // fall back to the full image if that variant does not exist.
+        var thumb = /\.webp$/i.test(reviewSrc) ? reviewSrc.replace(/\.webp$/i, '-240.webp') : reviewSrc;
+        reviewImg.onerror = function () { this.onerror = null; this.src = reviewSrc; };
+        reviewImg.src = thumb;
       }
     }
     updateReviewVariants();

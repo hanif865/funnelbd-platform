@@ -3,6 +3,7 @@ import { IncompleteOrder, DailyStat } from '../models/index.js';
 import { getSettings } from '../services/settings.service.js';
 import { getCatalog } from '../services/catalog.cache.js';
 import { storePhoneLinks } from '../services/storeInfo.js';
+import { buildSrcset, thumbUrl } from '../services/image.service.js';
 import {
   createOrder,
   OrderValidationError,
@@ -69,6 +70,9 @@ export async function renderLanding(req, res, next) {
       zones,
       settings,
       storePhones: storePhoneLinks(settings.storeInfo),
+      imgSrcset: buildSrcset, // (url) → responsive srcset string, or '' if none
+      imgThumb: thumbUrl, // (url) → small variant URL for fixed thumbnails
+
       // Only public pixel ids reach the browser — never tokens/secrets.
       tracking: toPublicConfig(trackingCfg),
       defaultOfferId: defaultOffer ? String(defaultOffer._id) : '',

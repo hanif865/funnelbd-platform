@@ -30,6 +30,12 @@
     // Spread helpline numbers down the page instead of bunching them all in one
     // row: each contact spot picks a number, cycling through the list.
     const contactAt = (i) => (storePhones.length ? storePhones[i % storePhones.length] : null);
+    // Responsive image attributes: emits srcset + sizes only when variant files
+    // exist (imgSrcset returns '' otherwise), so the plain src always works.
+    const srcsetAttr = (src, sizes) => {
+      const ss = typeof imgSrcset === 'function' ? imgSrcset(src) : '';
+      return ss ? ` srcset="${ss}" sizes="${sizes}"` : '';
+    };
   %>
 
   <!-- ── 1. TOP RED BANNER (Khaleshaat style) ── -->
@@ -84,9 +90,9 @@
                       </div>
                       <div class="wcf-item-image">
                         <% if (offer.image) { %>
-                          <img src="<%= offer.image %>" alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
+                          <img src="<%= offer.image %>"<%- srcsetAttr(offer.image, '(max-width: 600px) 72px, 96px') %> alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
                         <% } else if (hasImages) { %>
-                          <img src="<%= product.images[0] %>" alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
+                          <img src="<%= product.images[0] %>"<%- srcsetAttr(product.images[0], '(max-width: 600px) 72px, 96px') %> alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
                         <% } else { %>
                           <div class="wcf-item-placeholder">📦</div>
                         <% } %>
@@ -179,8 +185,8 @@
                       <tr class="cart_item">
                         <td class="product-name fk-review-name-cell">
                           <img id="reviewProdImg"
-                               src="<%= (firstOffer && firstOffer.image) || (product.images && product.images[0]) || '' %>"
-                               alt="Product" class="fk-review-thumb" />
+                               src="<%= imgThumb(((firstOffer && firstOffer.image) || (product.images && product.images[0]) || '')) %>"
+                               alt="Product" class="fk-review-thumb" width="44" height="44" />
                           <div>
                             <span id="reviewProdName" class="fk-review-name"><%= firstOffer.title || product.name %></span>
                             <span id="reviewProdQty" class="product-quantity fk-review-qty">&times; 1</span>
@@ -314,7 +320,7 @@
         <div class="fk-hero-img-frame gallery-main">
           <% if (hasImages) { %>
             <% product.images.forEach(function(src, i){ %>
-              <img class="gmain <%= i===0 ? 'active' : '' %>" src="<%= src %>" alt="<%= product.name %>" loading="<%= i===0 ? 'eager' : 'lazy' %>" fetchpriority="<%= i===0 ? 'high' : 'low' %>" decoding="<%= i===0 ? 'sync' : 'async' %>" />
+              <img class="gmain <%= i===0 ? 'active' : '' %>" src="<%= src %>"<%- srcsetAttr(src, '(max-width: 980px) 100vw, 948px') %> alt="<%= product.name %>" loading="<%= i===0 ? 'eager' : 'lazy' %>" fetchpriority="<%= i===0 ? 'high' : 'low' %>" decoding="<%= i===0 ? 'sync' : 'async' %>" />
             <% }); %>
             <% if (product.images.length > 1) { %>
               <button type="button" id="hero-slide-prev" class="slider-nav-btn prev-btn gnav prev" aria-label="Previous Slide">
@@ -332,7 +338,7 @@
         <% if (hasImages && product.images.length > 1) { %>
           <div class="gallery-thumbs" id="galleryThumbs">
             <% product.images.forEach(function(src, i){ %>
-              <img class="gthumb <%= i===0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= src %>" alt="thumb" loading="lazy" decoding="async" />
+              <img class="gthumb <%= i===0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= src %>"<%- srcsetAttr(src, '72px') %> alt="thumb" loading="lazy" decoding="async" />
             <% }); %>
           </div>
         <% } %>
@@ -482,7 +488,7 @@
         <div class="review-grid-khalesh">
           <% reviewImages.forEach(function(src){ %>
             <div class="review-item">
-              <img src="<%= src %>" alt="কাস্টমার রিভিউ" loading="lazy" decoding="async" />
+              <img src="<%= src %>"<%- srcsetAttr(src, '(max-width: 620px) 100vw, 300px') %> alt="কাস্টমার রিভিউ" loading="lazy" decoding="async" />
             </div>
           <% }); %>
         </div>
