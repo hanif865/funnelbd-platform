@@ -27,6 +27,7 @@ h4 { margin: 16px 0 8px; font-size: .95rem; color: var(--muted); }
 input, textarea, select { font-family: inherit; font-size: .95rem; padding: 10px 12px; border: 2px solid var(--line); border-radius: var(--radius); width: 100%; }
 input:focus, textarea:focus { outline: none; border-color: var(--brand); }
 .err { color: var(--brand); font-weight: 600; }
+.hint { color: #15803d; font-size: .75rem; }
 .muted { color: var(--muted); }
 
 /* Login */

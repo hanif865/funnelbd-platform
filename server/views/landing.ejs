@@ -7,9 +7,13 @@
   <meta name="description" content="<%= (product.description || product.name).replace(/<[^>]+>/g,' ').slice(0,150) %>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Baloo+Da+2:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <%# Fonts + icons load without blocking first paint (text shows in system font, then swaps). %>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Baloo+Da+2:wght@500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Baloo+Da+2:wght@500;600;700;800&display=swap" rel="stylesheet" /></noscript>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" /></noscript>
   <link rel="stylesheet" href="/public/css/landing.css" />
+  <% if (product.images && product.images[0]) { %><link rel="preload" as="image" href="<%= product.images[0] %>" fetchpriority="high" /><% } %>
 </head>
 <body class="khaleshaat-theme">
   <%
@@ -74,9 +78,9 @@
                       </div>
                       <div class="wcf-item-image">
                         <% if (offer.image) { %>
-                          <img src="<%= offer.image %>" alt="<%= offer.title %>" width="300" height="300" />
+                          <img src="<%= offer.image %>" alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
                         <% } else if (hasImages) { %>
-                          <img src="<%= product.images[0] %>" alt="<%= offer.title %>" width="300" height="300" />
+                          <img src="<%= product.images[0] %>" alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
                         <% } else { %>
                           <div class="wcf-item-placeholder">📦</div>
                         <% } %>
@@ -266,7 +270,7 @@
     <section class="sizechart-section" data-section="size_chart">
       <div class="fk-container">
         <div class="sizechart-box">
-          <img src="<%= c.sizeChartImage %>" alt="সাইজ চার্ট" class="sizechart-img" loading="lazy" />
+          <img src="<%= c.sizeChartImage %>" alt="সাইজ চার্ট" class="sizechart-img" loading="lazy" decoding="async" />
         </div>
       </div>
     </section>
@@ -294,7 +298,7 @@
         <div class="fk-hero-img-frame gallery-main">
           <% if (hasImages) { %>
             <% product.images.forEach(function(src, i){ %>
-              <img class="gmain <%= i===0 ? 'active' : '' %>" src="<%= src %>" alt="<%= product.name %>" loading="<%= i===0 ? 'eager' : 'lazy' %>" />
+              <img class="gmain <%= i===0 ? 'active' : '' %>" src="<%= src %>" alt="<%= product.name %>" loading="<%= i===0 ? 'eager' : 'lazy' %>" fetchpriority="<%= i===0 ? 'high' : 'low' %>" decoding="<%= i===0 ? 'sync' : 'async' %>" />
             <% }); %>
             <% if (product.images.length > 1) { %>
               <button type="button" id="hero-slide-prev" class="slider-nav-btn prev-btn gnav prev" aria-label="Previous Slide">
@@ -312,7 +316,7 @@
         <% if (hasImages && product.images.length > 1) { %>
           <div class="gallery-thumbs" id="galleryThumbs">
             <% product.images.forEach(function(src, i){ %>
-              <img class="gthumb <%= i===0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= src %>" alt="thumb" loading="lazy" />
+              <img class="gthumb <%= i===0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= src %>" alt="thumb" loading="lazy" decoding="async" />
             <% }); %>
           </div>
         <% } %>
@@ -448,7 +452,7 @@
         <div class="review-grid-khalesh">
           <% reviewImages.forEach(function(src){ %>
             <div class="review-item">
-              <img src="<%= src %>" alt="কাস্টমার রিভিউ" loading="lazy" />
+              <img src="<%= src %>" alt="কাস্টমার রিভিউ" loading="lazy" decoding="async" />
             </div>
           <% }); %>
         </div>

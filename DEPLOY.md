@@ -45,9 +45,15 @@ server {
   listen 80;
   server_name yourdomain.com;
 
-  client_max_body_size 6m;                 # image upload
+  client_max_body_size 16m;                # image upload (সার্ভার নিজে WebP-এ ছোট করে)
 
-  # Static assets — long cache (fingerprinted admin build + uploads)
+  # Uploaded images — unique filenames, never overwritten → 1 year immutable
+  location /public/uploads/ {
+    alias /var/www/funnelbd/public/uploads/;
+    expires 365d;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+  }
+  # Static assets (landing css/js)
   location /public/ {
     alias /var/www/funnelbd/public/;
     expires 7d;
@@ -80,7 +86,8 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## ৫. স্পিড চেকলিস্ট (মোবাইল Lighthouse ৯০+)
 - ল্যান্ডিং পেজ SSR + মিনিমাল JS (tracker + checkout, দুটোই `defer`)।
-- ছবি **WebP**-এ আপলোড করো, বড় ছবি এড়াও (৪MB লিমিট)।
+- যেকোনো ফরম্যাটে ছবি আপলোড করো (JPG/PNG/GIF/AVIF/WebP, ১৫MB পর্যন্ত; iPhone থেকে ব্রাউজারে আপলোড করলে HEIC নিজেই JPG হয়ে যায়) — সার্ভার নিজে EXIF মুছে, ১২০০px-এ ছোট করে **WebP**-এ সেভ করে।
+- পুরনো আপলোড (WebP-এর আগের) কনভার্ট করতে একবার: `npm run images:optimize`
 - gzip চালু (compression middleware + Cloudflare)।
 - অ্যাড চালানোর আগে PageSpeed Insights-এ মোবাইল স্কোর যাচাই।
 

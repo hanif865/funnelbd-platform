@@ -35,8 +35,14 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
 
-  // Static assets (landing css/js, uploaded images).
-  app.use('/public', express.static(path.join(ROOT, 'public'), { maxAge: config.isProd ? '7d' : 0 }));
+  // Uploaded images: filenames are unique and never overwritten → cache for a
+  // year, so repeat visitors load them from browser/CDN cache instantly.
+  app.use(
+    '/public/uploads',
+    express.static(path.join(ROOT, 'public', 'uploads'), { maxAge: config.isProd ? '365d' : 0, immutable: config.isProd })
+  );
+  // Static assets (landing css/js).
+  app.use('/public',express.static(path.join(ROOT, 'public'), { maxAge: config.isProd ? '7d' : 0 }));
 
   // Health check.
   app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
