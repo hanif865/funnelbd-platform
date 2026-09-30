@@ -8,6 +8,8 @@
   else if (field.name === 'address') icon = '<i class="fa-solid fa-location-dot fk-accent-icon"></i> ';
   else if (field.name === 'size' || field.name.includes('size')) icon = '<i class="fa-solid fa-ruler-horizontal fk-accent-icon"></i> ';
   else if (field.name === 'color' || field.name.includes('color')) icon = '<i class="fa-solid fa-palette fk-secondary-icon"></i> ';
+  // Browser/Android autofill hints for the core customer fields.
+  const autocomplete = { phone: 'tel', name: 'name', address: 'street-address' }[field.name] || 'off';
 %>
 <div class="field field-<%= field.type %> field-<%= field.name %>" data-field="<%= field.name %>">
   <% if (field.type === 'checkbox') { %>
@@ -19,7 +21,7 @@
     <label class="field-label" for="f_<%= field.name %>"><%- icon %><%- field.label %><%- star %></label>
 
     <% if (field.type === 'textarea') { %>
-      <textarea id="f_<%= field.name %>" name="<%= field.name %>" rows="3"
+      <textarea id="f_<%= field.name %>" name="<%= field.name %>" rows="3" autocomplete="<%= autocomplete %>"
         placeholder="<%= field.placeholder || field.label %>" <%= req %>></textarea>
 
     <% } else if (field.type === 'select') { %>
@@ -42,8 +44,8 @@
 
     <% } else { %>
       <input id="f_<%= field.name %>" type="<%= field.type === 'number' ? 'number' : (field.name === 'phone' ? 'tel' : 'text') %>"
-        name="<%= field.name %>" placeholder="<%= field.placeholder || field.label %>"
-        <%= field.name === 'phone' ? 'inputmode="numeric" maxlength="11"' : '' %> <%= req %> />
+        name="<%= field.name %>" placeholder="<%= field.placeholder || field.label %>" autocomplete="<%= autocomplete %>"
+        <%- field.name === 'phone' ? 'inputmode="tel" maxlength="14"' : '' %> <%= req %> />
     <% } %>
   <% } %>
   <p class="field-error" data-error-for="<%= field.name %>"></p>

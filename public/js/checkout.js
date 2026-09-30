@@ -564,9 +564,36 @@
     });
   }
 
+  // Autofill/paste often gives "+8801XXXXXXXXX", "8801…" or "1XXXXXXXXX" (no
+  // leading 0). Rewrite to the local 01XXXXXXXXX form once it's a complete,
+  // valid number — never mid-typing — so the customer sees the right number.
+  function normalizeBdPhone(value) {
+    var d = String(value || '').replace(/\D/g, '');
+    if (d.indexOf('880') === 0) d = d.slice(2);
+    else if (d.length === 10 && d.charAt(0) === '1') d = '0' + d;
+    return /^01[3-9]\d{8}$/.test(d) ? d : null;
+  }
+  function wirePhoneNormalizer() {
+    document.querySelectorAll('#orderForm input[name="phone"], #exitLeadPhone').forEach(function (el) {
+      function fix() {
+        var n = normalizeBdPhone(el.value);
+        if (n && n !== el.value) {
+          el.value = n;
+          // let draft capture / tracking / review listeners see the new value
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+      el.addEventListener('input', fix);
+      el.addEventListener('change', fix);
+      el.addEventListener('blur', fix);
+      fix(); // value may already be autofilled before scripts ran
+    });
+  }
+
   function boot() {
     init();
     wireVideoFacades();
+    wirePhoneNormalizer();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
