@@ -1034,6 +1034,48 @@ a {
   }
 }
 
+/* Trust strip (reasons to buy, right above the checkout form) */
+.fk-trust-strip-wrap {
+  padding: 4px 0 2px;
+}
+.fk-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px 22px;
+  max-width: 840px;
+  margin: 8px auto 0;
+  padding: 12px 16px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+}
+.fk-trust-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #15803d;
+}
+.fk-trust-strip i {
+  color: #16a34a;
+}
+/* The gallery sits at the very top now; trim its top padding a little */
+.fk-hero-top {
+  padding-top: 10px;
+}
+@media (max-width: 560px) {
+  .fk-trust-strip {
+    gap: 7px 14px;
+    padding: 10px 12px;
+  }
+  .fk-trust-strip span {
+    font-size: 12.5px;
+  }
+}
+
 /* ── 4B. Product Video Section ── */
 .fk-video-section {
   padding: 12px 0 20px;

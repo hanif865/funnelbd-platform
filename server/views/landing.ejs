@@ -45,6 +45,64 @@
     </div>
   </div>
 
+  <!-- ── 1B. PRODUCT IMAGE SHOWCASE (moved above the checkout form) ── -->
+  <section class="fk-hero-section fk-hero-top py-6" data-section="hero_showcase">
+    <div class="fk-container">
+      <!-- Image Slider Frame -->
+      <div class="fk-hero-slider-wrap shine-container" id="gallery">
+        <div class="fk-hero-badges">
+          <% if (c.heroBadge1) { %>
+            <span class="fk-hero-badge fk-hero-badge-primary anim-float">
+              <%= c.heroBadge1 %>
+            </span>
+          <% } %>
+          <% if (c.heroBadge2) { %>
+            <span class="fk-hero-badge fk-hero-badge-gold anim-float">
+              <%= c.heroBadge2 %>
+            </span>
+          <% } %>
+        </div>
+
+        <div class="fk-hero-img-frame gallery-main">
+          <% if (hasImages) { %>
+            <% product.images.forEach(function(src, i){ %>
+              <img class="gmain <%= i===0 ? 'active' : '' %>" src="<%= src %>"<%- srcsetAttr(src, '(max-width: 980px) 100vw, 948px') %> alt="<%= product.name %>" loading="<%= i===0 ? 'eager' : 'lazy' %>" fetchpriority="<%= i===0 ? 'high' : 'low' %>" decoding="<%= i===0 ? 'sync' : 'async' %>" />
+            <% }); %>
+            <% if (product.images.length > 1) { %>
+              <button type="button" id="hero-slide-prev" class="slider-nav-btn prev-btn gnav prev" aria-label="Previous Slide">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <button type="button" id="hero-slide-next" class="slider-nav-btn next-btn gnav next" aria-label="Next Slide">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            <% } %>
+          <% } else { %>
+            <div class="gallery-placeholder">📦<br />ছবি যোগ করুন</div>
+          <% } %>
+        </div>
+
+        <% if (hasImages && product.images.length > 1) { %>
+          <div class="gallery-thumbs" id="galleryThumbs">
+            <% product.images.forEach(function(src, i){ %>
+              <img class="gthumb <%= i===0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= src %>"<%- srcsetAttr(src, '72px') %> alt="thumb" loading="lazy" decoding="async" />
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust strip: quick reasons to trust/buy, right above the form -->
+  <div class="fk-trust-strip-wrap">
+    <div class="fk-container">
+      <div class="fk-trust-strip">
+        <span><i class="fa-solid fa-shield-halved"></i> ১০০% অরিজিনাল পণ্য</span>
+        <span><i class="fa-solid fa-truck-fast"></i> সারাদেশে দ্রুত ডেলিভারি</span>
+        <span><i class="fa-solid fa-circle-check"></i> ক্যাশ অন ডেলিভারি — হাতে পেয়ে টাকা</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ── 2. CHECKOUT SECTION AT TOP (Khaleshaat exact design) ── -->
   <section class="fk-checkout-section" id="checkout" data-section="checkout">
     <div class="fk-container fk-checkout-container">
@@ -298,52 +356,10 @@
     </section>
   <% } %>
 
-  <!-- ── 4. HERO SHOWCASE (Khaleshaat exact slider & showcase) ── -->
-  <section class="fk-hero-section py-6" data-section="hero_showcase">
+  <!-- ── 4. HERO COPY & PRICE (gallery moved to the top) ── -->
+  <section class="fk-hero-section fk-hero-lower py-6">
     <div class="fk-container">
       
-      <!-- Image Slider Frame -->
-      <div class="fk-hero-slider-wrap shine-container" id="gallery">
-        <div class="fk-hero-badges">
-          <% if (c.heroBadge1) { %>
-            <span class="fk-hero-badge fk-hero-badge-primary anim-float">
-              <%= c.heroBadge1 %>
-            </span>
-          <% } %>
-          <% if (c.heroBadge2) { %>
-            <span class="fk-hero-badge fk-hero-badge-gold anim-float">
-              <%= c.heroBadge2 %>
-            </span>
-          <% } %>
-        </div>
-
-        <div class="fk-hero-img-frame gallery-main">
-          <% if (hasImages) { %>
-            <% product.images.forEach(function(src, i){ %>
-              <img class="gmain <%= i===0 ? 'active' : '' %>" src="<%= src %>"<%- srcsetAttr(src, '(max-width: 980px) 100vw, 948px') %> alt="<%= product.name %>" loading="<%= i===0 ? 'eager' : 'lazy' %>" fetchpriority="<%= i===0 ? 'high' : 'low' %>" decoding="<%= i===0 ? 'sync' : 'async' %>" />
-            <% }); %>
-            <% if (product.images.length > 1) { %>
-              <button type="button" id="hero-slide-prev" class="slider-nav-btn prev-btn gnav prev" aria-label="Previous Slide">
-                <i class="fa-solid fa-chevron-left"></i>
-              </button>
-              <button type="button" id="hero-slide-next" class="slider-nav-btn next-btn gnav next" aria-label="Next Slide">
-                <i class="fa-solid fa-chevron-right"></i>
-              </button>
-            <% } %>
-          <% } else { %>
-            <div class="gallery-placeholder">📦<br />ছবি যোগ করুন</div>
-          <% } %>
-        </div>
-
-        <% if (hasImages && product.images.length > 1) { %>
-          <div class="gallery-thumbs" id="galleryThumbs">
-            <% product.images.forEach(function(src, i){ %>
-              <img class="gthumb <%= i===0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= src %>"<%- srcsetAttr(src, '72px') %> alt="thumb" loading="lazy" decoding="async" />
-            <% }); %>
-          </div>
-        <% } %>
-      </div>
-
       <!-- Hero Copy & Price Box -->
       <div class="text-center my-6 fk-hero-copy">
         <% if (c.trendingBadge) { %>
