@@ -48,6 +48,12 @@ export const config = {
     email: process.env.SEED_ADMIN_EMAIL || 'admin@funnelbd.local',
     password: process.env.SEED_ADMIN_PASSWORD || 'admin1234',
   },
+
+  // Instant order push via Telegram (free). Leave both empty to disable.
+  telegram: {
+    botToken: (process.env.TELEGRAM_BOT_TOKEN || '').trim(),
+    chatId: (process.env.TELEGRAM_CHAT_ID || '').trim(),
+  },
 };
 
 export default config;

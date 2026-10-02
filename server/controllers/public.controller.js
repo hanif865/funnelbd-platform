@@ -16,6 +16,7 @@ import { buildPurchaseJobs, buildMomentJobs } from '../services/tracking/index.j
 import { extractCity } from '../services/tracking/hash.util.js';
 import { enqueueTrackingJobs } from '../queues/tracking.queue.js';
 import { sendConfirmationSms } from '../services/sms.service.js';
+import { sendOrderNotification } from '../services/notify.service.js';
 import { reportError } from '../services/systemErrors.js';
 
 /** Fixed exit-intent discount (৳). The only discount a visitor can receive. */
@@ -155,6 +156,9 @@ export async function submitCheckout(req, res, next) {
 
     // Confirmation SMS (fire-and-forget).
     sendConfirmationSms(order).catch((e) => console.error('[checkout] confirmation sms failed:', e.message));
+
+    // Instant merchant push (Telegram, fire-and-forget).
+    sendOrderNotification(order).catch(() => {});
 
     return res.status(201).json({
       ok: true,
