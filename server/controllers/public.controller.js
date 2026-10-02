@@ -22,6 +22,25 @@ import { reportError } from '../services/systemErrors.js';
 const EXIT_DISCOUNT = 20;
 
 /**
+ * The page the visitor was actually on, for event_source_url (Meta/TikTok
+ * attribution). The funnel is served on the main domain via a proxy, so we must
+ * report that real URL — not the app's own baseUrl. Returns origin+path only
+ * (no query, to avoid leaking params), or null to let the builder fall back.
+ */
+function sanitizePageUrl(raw) {
+  try {
+    const u = new URL(String(raw));
+    if (u.protocol === 'http:' || u.protocol === 'https:') return u.origin + u.pathname;
+  } catch {
+    /* not a usable URL */
+  }
+  return null;
+}
+function refererUrl(req) {
+  return sanitizePageUrl(req.get('referer') || req.get('referrer') || '');
+}
+
+/**
  * Tiny TTL set of recently mirrored tracking event ids (single web process).
  * Returns true if the key was already seen within the window.
  */
@@ -126,9 +145,10 @@ export async function submitCheckout(req, res, next) {
     ).catch((e) => reportError('checkout:incomplete-convert', e));
 
     // Fire server-side Purchase (richest identifiers → best EMQ). Non-blocking;
-    // never lets a tracking hiccup break the order confirmation.
+    // never lets a tracking hiccup break the order confirmation. Pass the real
+    // landing URL (Referer) so the event attributes to the domain the buyer saw.
     try {
-      await enqueueTrackingJobs(buildPurchaseJobs(order));
+      await enqueueTrackingJobs(buildPurchaseJobs(order, refererUrl(req)));
     } catch (e) {
       reportError('checkout:tracking-enqueue', e);
     }
@@ -215,7 +235,7 @@ export async function saveDraft(req, res) {
  */
 export async function trackMoment(req, res) {
   try {
-    const { moment, eventId, fields = {}, custom = {} } = req.body || {};
+    const { moment, eventId, fields = {}, custom = {}, sourceUrl } = req.body || {};
     if (!['pageview', 'add_to_cart', 'initiate'].includes(moment) || !eventId) {
       return res.status(204).end();
     }
@@ -252,6 +272,9 @@ export async function trackMoment(req, res) {
         numItems: typeof custom.numItems === 'number' ? custom.numItems : undefined,
         vcEventId: typeof custom.vcEventId === 'string' ? custom.vcEventId : undefined,
         path: '/',
+        // Real page the visitor was on (browser-sent, else Referer) so the
+        // event attributes to the actual domain, not the app's baseUrl.
+        sourceUrl: sanitizePageUrl(sourceUrl) || refererUrl(req),
       },
     });
 

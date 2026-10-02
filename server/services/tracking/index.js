@@ -101,8 +101,11 @@ function eventSourceUrl(path = '/') {
   return `${config.baseUrl}${path}`;
 }
 
-/** Build the jobs for a completed purchase (richest identifiers → best EMQ). */
-export function buildPurchaseJobs(order) {
+/** Build the jobs for a completed purchase (richest identifiers → best EMQ).
+ * `sourceUrl` is the real page the buyer was on (e.g. the main domain) — pass it
+ * so Meta/TikTok attribute the event to the actual landing domain, not the
+ * app's own baseUrl. Falls back to baseUrl when not provided. */
+export function buildPurchaseJobs(order, sourceUrl) {
   const t = order.tracking || {};
   const city = extractCity(order.customer?.address, order.deliveryZoneName);
   const identifiers = {
@@ -127,7 +130,7 @@ export function buildPurchaseJobs(order) {
   const contentId = String(order.offerId);
 
   const jobs = [];
-  const url = eventSourceUrl('/');
+  const url = sourceUrl || eventSourceUrl('/');
 
   for (const eventName of EVENT_MAP.purchase.facebook) {
     jobs.push({
@@ -217,7 +220,8 @@ export function buildPurchaseJobs(order) {
 export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}, orderId = null }) {
   const map = EVENT_MAP[moment];
   if (!map) return [];
-  const url = eventSourceUrl(custom.path || '/');
+  // The browser sends the real page URL (custom.sourceUrl); fall back to baseUrl.
+  const url = custom.sourceUrl || eventSourceUrl(custom.path || '/');
   const jobs = [];
 
   for (const eventName of map.facebook) {

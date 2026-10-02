@@ -207,7 +207,8 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         keepalive: true,
-        body: JSON.stringify(Object.assign({ moment: moment, eventId: eventId }, extra || {})),
+        // sourceUrl = the real page URL (e.g. main domain) for event_source_url.
+        body: JSON.stringify(Object.assign({ moment: moment, eventId: eventId, sourceUrl: location.origin + location.pathname }, extra || {})),
       }).catch(function () {});
     } catch (e) {}
   }
