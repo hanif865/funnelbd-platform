@@ -270,6 +270,15 @@ textarea { resize: vertical; }
 .stat-value { font-size: 1.55rem; font-weight: 750; margin-top: 6px; color: var(--ink); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .stat-value small { font-size: .8rem; font-weight: 600; color: var(--muted); letter-spacing: 0; margin-left: 4px; }
 .stat-sub { color: var(--muted); font-size: .84rem; margin-top: 3px; }
+
+/* Today-at-a-glance tiles */
+.today-card { margin-bottom: 16px; }
+.today-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.today-tile { background: var(--bg, #f8fafc); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+.today-tile.accent { background: linear-gradient(135deg, #fff1f2, #fff); border-color: #fecdd3; }
+.today-tile-value { font-size: 1.4rem; font-weight: 750; color: var(--ink); letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.today-tile-label { color: var(--muted); font-size: .76rem; font-weight: 600; margin-top: 4px; }
+
 .dash-lower { align-items: start; gap: 16px; }
 .dash-lower > .card + .card { margin-top: 0; }
 .chart-wrap { width: 100%; }

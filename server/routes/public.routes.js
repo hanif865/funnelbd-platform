@@ -6,6 +6,7 @@ import {
   saveDraft,
   saveExitLead,
   recordSectionDwell,
+  recordEvent,
 } from '../controllers/public.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 
@@ -40,6 +41,9 @@ router.post('/api/checkout/exit-lead', exitLeadLimit, saveExitLead);
 
 // Section dwell time & exit tracking beacon.
 router.post('/api/analytics/section-dwell', beaconLimit, recordSectionDwell);
+
+// Interaction events (call / whatsapp / order-button clicks).
+router.post('/api/analytics/event', beaconLimit, recordEvent);
 
 // Server-side mirror for browser tracking moments (pageview, add_to_cart, initiate).
 router.post('/api/track', beaconLimit, trackMoment);

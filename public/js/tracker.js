@@ -213,6 +213,29 @@
     } catch (e) {}
   }
 
+  // ── Interaction events (call / whatsapp / order-button clicks) ──
+  function trackEvent(name) {
+    try {
+      var body = JSON.stringify({ event: name });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/analytics/event', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch('/api/analytics/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true, body: body }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  function initInteractionTracker() {
+    document.addEventListener('click', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('a, button') : null;
+      if (!el) return;
+      var href = (el.getAttribute && el.getAttribute('href')) || '';
+      if (/^tel:/i.test(href) || el.classList.contains('btn-call')) trackEvent('call');
+      else if (/wa\.me|whatsapp/i.test(href) || el.classList.contains('btn-whatsapp')) trackEvent('whatsapp');
+      else if (el.classList.contains('js-scroll-checkout')) trackEvent('order_click');
+    }, true);
+  }
+
   // ── 4. Event firing ──
 
   // PageView & ViewContent (safely deduplicated with matching event IDs)
@@ -520,6 +543,9 @@
 
     // 4. Section Dwell Time & Exit Tracker
     initSectionDwellTracker();
+
+    // 5. Call / WhatsApp / order-button click counts
+    initInteractionTracker();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

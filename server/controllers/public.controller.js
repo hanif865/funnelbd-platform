@@ -333,6 +333,23 @@ export async function saveExitLead(req, res) {
   }
 }
 
+/** Interaction events we count for the dashboard (whitelist — ignore the rest). */
+const TRACKED_EVENTS = ['call', 'whatsapp', 'order_click'];
+
+/**
+ * POST /api/analytics/event — count a funnel interaction (call / whatsapp /
+ * order-button click) for today's stats. Always 204; fire-and-forget.
+ */
+export async function recordEvent(req, res) {
+  try {
+    const { event } = req.body || {};
+    if (TRACKED_EVENTS.includes(event)) await DailyStat.recordEvent(event);
+  } catch (err) {
+    reportError('analytics-event', err);
+  }
+  return res.status(204).end();
+}
+
 /**
  * POST /api/analytics/section-dwell
  * Receives time spent per section (seconds) and the exit section where the user bounced.
@@ -356,4 +373,5 @@ export default {
   saveDraft,
   saveExitLead,
   recordSectionDwell,
+  recordEvent,
 };

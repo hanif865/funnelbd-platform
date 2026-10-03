@@ -20,7 +20,7 @@ export default function Dashboard() {
 
   if (err) return <p className="err">{err}</p>;
   if (!d) return <p className="muted">Loading…</p>;
-  const { cards, incomplete, sources, series, recent, sectionAnalytics = [] } = d;
+  const { cards, incomplete, sources, series, recent, sectionAnalytics = [], todayDetail: td } = d;
 
   const totalExits = sectionAnalytics.reduce((sum, s) => sum + (s.exits || 0), 0);
   const maxExits = Math.max(0, ...sectionAnalytics.map((s) => s.exits || 0));
@@ -34,6 +34,24 @@ export default function Dashboard() {
           <p className="page-sub">Sales, conversion and where visitors drop off.</p>
         </div>
       </div>
+
+      {td && (
+        <div className="card today-card">
+          <div className="card-head">
+            <h3>Today at a glance</h3>
+            <span className="muted">Resets at midnight</span>
+          </div>
+          <div className="today-grid">
+            <Mini label="Unique visitors" value={num(td.visitors)} />
+            <Mini label="Total visits" value={num(td.visits)} />
+            <Mini label="Orders" value={num(td.orders)} accent />
+            <Mini label="Revenue" value={money(td.revenue)} accent />
+            <Mini label="Call clicks" value={num(td.calls)} />
+            <Mini label="WhatsApp clicks" value={num(td.whatsapp)} />
+            <Mini label="Order-button clicks" value={num(td.orderClicks)} />
+          </div>
+        </div>
+      )}
 
       <div className="stat-grid">
         <Stat label="Today" value={money(cards.today.revenue)} sub={orders(cards.today.orders)} />
@@ -155,6 +173,15 @@ function Stat({ label, value, sub, accent }) {
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value}</div>
       {sub && <div className="stat-sub">{sub}</div>}
+    </div>
+  );
+}
+
+function Mini({ label, value, accent }) {
+  return (
+    <div className={'today-tile' + (accent ? ' accent' : '')}>
+      <div className="today-tile-value">{value}</div>
+      <div className="today-tile-label">{label}</div>
     </div>
   );
 }

@@ -50,6 +50,21 @@ export async function getDashboard(req, res, next) {
     const visitors = visitAgg[0]?.visitors || 0;
     const conversionRate = visitors ? +((month.orders / visitors) * 100).toFixed(1) : null;
 
+    // Today at a glance: unique visitors, visits and interaction clicks
+    // (call / whatsapp / order-button) from today's DailyStat doc.
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayStat = await DailyStat.findOne({ date: todayKey }).lean();
+    const mapGet = (m, k) => (m instanceof Map ? m.get(k) : m?.[k]) || 0;
+    const todayDetail = {
+      visitors: todayStat?.visitors || 0,
+      visits: todayStat?.visits || 0,
+      orders: today.orders,
+      revenue: today.revenue,
+      calls: mapGet(todayStat?.events, 'call'),
+      whatsapp: mapGet(todayStat?.events, 'whatsapp'),
+      orderClicks: mapGet(todayStat?.events, 'order_click'),
+    };
+
     // Incomplete + recovery.
     const [incompleteActive, incompleteConverted, incompleteTotal] = await Promise.all([
       IncompleteOrder.countDocuments({ status: { $in: ['new', 'called'] } }),
@@ -147,6 +162,7 @@ export async function getDashboard(req, res, next) {
 
     res.json({
       cards: { today, yesterday, week, month, aov, conversionRate, visitors },
+      todayDetail,
       incomplete: { active: incompleteActive, converted: incompleteConverted, recoveryRate },
       sources,
       statusCounts: Object.fromEntries(statusAgg.map((s) => [s._id, s.count])),

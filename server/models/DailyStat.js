@@ -13,6 +13,8 @@ const dailyStatSchema = new mongoose.Schema(
     sectionDwell: { type: Map, of: Number, default: {} },
     sectionExits: { type: Map, of: Number, default: {} },
     sectionViews: { type: Map, of: Number, default: {} },
+    // Interaction counters, e.g. { call: 12, whatsapp: 7, order_click: 30 }.
+    events: { type: Map, of: Number, default: {} },
   },
   { collection: 'daily_stats' }
 );
@@ -22,6 +24,17 @@ dailyStatSchema.statics.track = function (isNewVisitor) {
   return this.updateOne(
     { date },
     { $inc: { visits: 1, visitors: isNewVisitor ? 1 : 0 } },
+    { upsert: true }
+  );
+};
+
+/** Count one interaction (call/whatsapp/order_click) for today. */
+dailyStatSchema.statics.recordEvent = function (name, count = 1) {
+  if (!name || typeof name !== 'string') return;
+  const date = new Date().toISOString().slice(0, 10);
+  return this.updateOne(
+    { date },
+    { $inc: { [`events.${name}`]: count } },
     { upsert: true }
   );
 };
