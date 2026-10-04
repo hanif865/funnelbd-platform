@@ -42,6 +42,36 @@ function refererUrl(req) {
 }
 
 /**
+ * Visitor attribution (click ids, campaign/ad ids, fbp/fbc, ip/ua) from the
+ * request cookies — stored on the incomplete order so an admin "convert to
+ * order" can fire a Purchase attributed to the original ad/campaign.
+ */
+function trackingFromRequest(req) {
+  const c = req.cookies || {};
+  const utm = {};
+  for (const k of ['source', 'medium', 'campaign', 'content', 'term', 'id']) {
+    if (c['fbd_utm_' + k]) utm[k] = c['fbd_utm_' + k];
+  }
+  return {
+    fbp: c._fbp || '',
+    fbc: c._fbc || (c.fbd_fbclid ? `fb.1.${Date.now()}.${c.fbd_fbclid}` : ''),
+    fbclid: c.fbd_fbclid || '',
+    gclid: c.fbd_gclid || '',
+    wbraid: c.fbd_wbraid || '',
+    gbraid: c.fbd_gbraid || '',
+    ttclid: c.fbd_ttclid || '',
+    ttp: c._ttp || c.fbd_ttp || '',
+    campaignId: c.fbd_campaign_id || '',
+    adId: c.fbd_ad_id || '',
+    adsetId: c.fbd_adset_id || '',
+    utm,
+    ip: req.clientIp || '',
+    userAgent: req.clientUserAgent || '',
+    externalId: req.sessionId || '',
+  };
+}
+
+/**
  * Tiny TTL set of recently mirrored tracking event ids (single web process).
  * Returns true if the key was already seen within the window.
  */
@@ -209,6 +239,9 @@ export async function saveDraft(req, res) {
       data: fields,
       offerId: offerId || null,
       lastActivityAt: new Date(),
+      // Keep the visitor's attribution so a converted order can fire a Purchase
+      // to the right campaign (cookies persist, so this stays the original click).
+      tracking: trackingFromRequest(req),
     };
     if (phone) {
       set.phone = phone;
@@ -304,6 +337,7 @@ export async function saveExitLead(req, res) {
         'data.exitReason': String(reason || 'অজানা কারণ').slice(0, 200),
         'data.discountOffered': EXIT_DISCOUNT,
         lastActivityAt: new Date(),
+        tracking: trackingFromRequest(req),
       },
       $setOnInsert: {
         sessionId: req.sessionId,

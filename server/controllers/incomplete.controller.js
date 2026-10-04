@@ -2,6 +2,9 @@ import { IncompleteOrder, INCOMPLETE_STATUSES, Offer } from '../models/index.js'
 import { createOrder } from '../services/order.service.js';
 import { sendFollowUpSms } from '../services/sms.service.js';
 import { getSetting } from '../services/settings.service.js';
+import { buildPurchaseJobs } from '../services/tracking/index.js';
+import { enqueueTrackingJobs } from '../queues/tracking.queue.js';
+import { reportError } from '../services/systemErrors.js';
 
 /**
  * GET /api/admin/incomplete
@@ -92,6 +95,7 @@ export async function convertIncomplete(req, res, next) {
 
     const { offerId, quantity = 1, deliveryZoneId, fields = {} } = req.body || {};
     const mergedFields = { ...(item.data || {}), ...fields };
+    const t = item.tracking || {};
 
     const order = await createOrder(
       {
@@ -99,13 +103,23 @@ export async function convertIncomplete(req, res, next) {
         quantity,
         deliveryZoneId,
         fields: mergedFields,
-        tracking: item.tracking || {},
+        tracking: t,
       },
-      { source: 'Admin', skipDuplicateCheck: true }
+      // Carry the captured ip/ua/session so the Purchase match quality stays high.
+      { source: 'Admin', skipDuplicateCheck: true, ip: t.ip, userAgent: t.userAgent, externalId: t.externalId }
     );
 
     item.status = 'converted';
     await item.save();
+
+    // Fire a server-side Purchase so this recovered sale is attributed to the
+    // original ad/campaign (the lead's captured fbc/fbclid/campaign). No browser
+    // event here, so no deduplication is needed. Non-blocking.
+    try {
+      await enqueueTrackingJobs(buildPurchaseJobs(order));
+    } catch (e) {
+      reportError('incomplete-convert:tracking', e);
+    }
 
     res.status(201).json({ ok: true, orderNumber: order.orderNumber, orderId: order._id });
   } catch (err) {
