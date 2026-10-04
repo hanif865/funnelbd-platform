@@ -1,11 +1,5 @@
 import { Order, IncompleteOrder, DailyStat } from '../models/index.js';
-
-function startOf(daysAgo) {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - daysAgo);
-  return d;
-}
+import { dhakaStartOf as startOf, dhakaYmd, DHAKA_TZ } from '../utils/time.js';
 
 /** Orders + revenue in [from, to). Revenue excludes cancelled/returned. */
 async function rangeStats(from, to) {
@@ -42,7 +36,7 @@ export async function getDashboard(req, res, next) {
     const aov = month.orders ? Math.round(month.revenue / month.orders) : 0;
 
     // Conversion: month orders ÷ month unique visitors.
-    const monthDate = monthStart.toISOString().slice(0, 10);
+    const monthDate = dhakaYmd(monthStart);
     const visitAgg = await DailyStat.aggregate([
       { $match: { date: { $gte: monthDate } } },
       { $group: { _id: null, visitors: { $sum: '$visitors' }, visits: { $sum: '$visits' } } },
@@ -52,7 +46,7 @@ export async function getDashboard(req, res, next) {
 
     // Today at a glance: unique visitors, visits and interaction clicks
     // (call / whatsapp / order-button) from today's DailyStat doc.
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = dhakaYmd();
     const todayStat = await DailyStat.findOne({ date: todayKey }).lean();
     const mapGet = (m, k) => (m instanceof Map ? m.get(k) : m?.[k]) || 0;
     const todayDetail = {
@@ -88,7 +82,7 @@ export async function getDashboard(req, res, next) {
       { $match: { createdAt: { $gte: monthStart } } },
       {
         $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: DHAKA_TZ } },
           orders: { $sum: 1 },
           revenue: { $sum: { $cond: [{ $in: ['$status', ['cancelled', 'returned']] }, 0, '$total'] } },
         },
@@ -98,7 +92,7 @@ export async function getDashboard(req, res, next) {
     // Fill missing days with zeros.
     const series = [];
     for (let i = 29; i >= 0; i--) {
-      const key = startOf(i).toISOString().slice(0, 10);
+      const key = dhakaYmd(startOf(i));
       const found = daily.find((d) => d._id === key);
       series.push({ date: key, orders: found?.orders || 0, revenue: found?.revenue || 0 });
     }

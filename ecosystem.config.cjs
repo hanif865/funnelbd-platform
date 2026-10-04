@@ -7,14 +7,14 @@ module.exports = {
       script: 'server/web.js',
       instances: 1,
       exec_mode: 'fork',
-      env: { NODE_ENV: 'production' },
+      env: { NODE_ENV: 'production', TZ: 'Asia/Dhaka' },
     },
     {
       name: 'funnelbd-worker',
       script: 'server/worker.js',
       instances: 1,
       exec_mode: 'fork',
-      env: { NODE_ENV: 'production' },
+      env: { NODE_ENV: 'production', TZ: 'Asia/Dhaka' },
     },
   ],
 };

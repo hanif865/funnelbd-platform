@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { dhakaYmd } from '../utils/time.js';
 
 /**
  * Per-day traffic counters for the dashboard conversion rate. `date` is a
@@ -20,7 +21,7 @@ const dailyStatSchema = new mongoose.Schema(
 );
 
 dailyStatSchema.statics.track = function (isNewVisitor) {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = dhakaYmd();
   return this.updateOne(
     { date },
     { $inc: { visits: 1, visitors: isNewVisitor ? 1 : 0 } },
@@ -31,7 +32,7 @@ dailyStatSchema.statics.track = function (isNewVisitor) {
 /** Count one interaction (call/whatsapp/order_click) for today. */
 dailyStatSchema.statics.recordEvent = function (name, count = 1) {
   if (!name || typeof name !== 'string') return;
-  const date = new Date().toISOString().slice(0, 10);
+  const date = dhakaYmd();
   return this.updateOne(
     { date },
     { $inc: { [`events.${name}`]: count } },
@@ -40,7 +41,7 @@ dailyStatSchema.statics.recordEvent = function (name, count = 1) {
 };
 
 dailyStatSchema.statics.recordSectionDwell = async function ({ date, dwell = {}, exitSection = '', views = [] } = {}) {
-  const targetDate = date || new Date().toISOString().slice(0, 10);
+  const targetDate = date || dhakaYmd();
   const inc = {};
 
   if (exitSection && typeof exitSection === 'string') {
