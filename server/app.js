@@ -14,6 +14,7 @@ import { sessionMiddleware } from './middlewares/session.js';
 import { notFound, errorHandler } from './middlewares/error.js';
 import publicRoutes from './routes/public.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import crmRoutes from './routes/crm.routes.js';
 import { startFollowUpSweep } from './services/followup.service.js';
 import { reportError, watchDbConnection } from './services/systemErrors.js';
 
@@ -89,6 +90,10 @@ export function createApp() {
 
   // Admin API.
   app.use('/api/admin', adminRoutes);
+
+  // CRM ingest feed (SafeCommerce) — secret-protected, read-only (+ optional
+  // reverse status sync). Base URL for the CRM: <origin>/api/dizara/v1
+  app.use('/api/dizara/v1', crmRoutes);
 
   // React admin panel (built). Served at /admin with SPA fallback.
   const adminDist = path.join(ROOT, 'admin-panel', 'dist');

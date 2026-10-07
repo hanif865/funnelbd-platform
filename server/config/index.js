@@ -66,6 +66,12 @@ export const config = {
     botToken: (process.env.TELEGRAM_BOT_TOKEN || '').trim(),
     chatId: (process.env.TELEGRAM_CHAT_ID || '').trim(),
   },
+
+  // CRM ingest feed (SafeCommerce). The CRM polls /api/dizara/v1/* with this
+  // shared secret. Empty => the feed is disabled (returns 401).
+  crm: {
+    secret: (process.env.CRM_INGEST_SECRET || '').trim(),
+  },
 };
 
 export default config;

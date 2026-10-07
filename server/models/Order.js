@@ -97,6 +97,9 @@ const orderSchema = new mongoose.Schema(
       consignmentId: { type: String, default: '' },
       trackingCode: { type: String, default: '' },
     },
+
+    // Last revision applied from the CRM reverse-sync (stale updates ignored).
+    crmRev: { type: Number, default: 0 },
   },
   { timestamps: true, collection: 'orders' }
 );
