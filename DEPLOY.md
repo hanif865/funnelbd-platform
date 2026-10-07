@@ -117,6 +117,20 @@ crontab (রোজ রাত ৩টা): `0 3 * * * cd /var/www/funnelbd && bash
 - `/etc/mongod.conf`: `bindIp: 127.0.0.1`, `security.authorization: enabled`, `wiredTiger.engineConfig.cacheSizeGB: 0.5` (অন্য সাইটের সাথে RAM ভাগাভাগি)।
 - `.env`: `MONGODB_URI=mongodb://funnelbd:<পাসওয়ার্ড>@127.0.0.1:27017/funnelbd?authSource=funnelbd` এবং `DB_STORAGE_LIMIT_MB` বাড়াও।
 
+## একই সার্ভারে আরেকটা ফানেল (দ্বিতীয় ডোমেইন)
+প্রতিটা ফানেল আলাদা ফোল্ডারে আলাদা clone — কোড একই, ডেটা সম্পূর্ণ আলাদা।
+
+| আলাদা রাখতে হবে | কোথায় |
+|---|---|
+| ফোল্ডার | `/var/www/<নাম>` |
+| `APP_NAME` | `.env` — PM2 প্রসেসের নাম হয় `<নাম>-web` / `<নাম>-worker` |
+| `PORT` | `.env` — প্রতিটার আলাদা (3000, 3001, …) |
+| ডেটাবেস + ইউজার | MongoDB-তে নতুন database ও user, `.env`-এর `MONGODB_URI` |
+| `JWT_SECRET`, `BASE_URL` | `.env` |
+| nginx server block + SSL | `/etc/nginx/sites-available/<ডোমেইন>.conf` |
+
+ছবি (`public/uploads`), ব্যাকআপ (`backups/`) ফোল্ডার আলাদা বলে নিজে থেকেই আলাদা থাকে। আপডেট দিতে প্রতিটা ফোল্ডারে আলাদা করে `git pull` + `pm2 reload ecosystem.config.cjs`।
+
 ## ৭. আপডেট ডিপ্লয়
 ```bash
 git pull && npm ci --omit=dev && npm run admin:install && npm run admin:build

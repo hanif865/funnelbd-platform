@@ -22,9 +22,21 @@ function required(name) {
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+function appName() {
+  const name = (process.env.APP_NAME || 'funnelbd').trim();
+  if (!/^[a-z0-9-]+$/.test(name)) {
+    console.error(`\n[config] APP_NAME "${name}" is invalid — use lowercase letters, digits and dashes.\n`);
+    process.exit(1);
+  }
+  return name;
+}
+
 export const config = {
   env: NODE_ENV,
   isProd: NODE_ENV === 'production',
+  // Instance name — keeps several funnels on one server apart (PM2 process
+  // names, Redis queue). Lowercase letters, digits and dashes.
+  appName: appName(),
   port: parseInt(process.env.PORT || '3000', 10),
   // Loopback by default: only nginx (same machine) can reach the app, so it
   // can't be hit directly from the internet bypassing Cloudflare/nginx.

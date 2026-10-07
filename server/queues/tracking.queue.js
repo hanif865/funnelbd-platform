@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import { config } from '../config/index.js';
 import { createRedisConnection, isRedisEnabled } from '../config/redis.js';
 import { runTrackingJob } from '../services/tracking/index.js';
 
@@ -11,7 +12,9 @@ import { runTrackingJob } from '../services/tracking/index.js';
  * Either way the request is never blocked waiting on Facebook/Google/TikTok,
  * and every attempt is logged to event_logs.
  */
-export const TRACKING_QUEUE = 'tracking';
+// Per-instance queue name so two funnels sharing one Redis never pick up each
+// other's jobs. The original instance keeps the historical name.
+export const TRACKING_QUEUE = config.appName === 'funnelbd' ? 'tracking' : `${config.appName}-tracking`;
 
 let queue = null;
 if (isRedisEnabled()) {
