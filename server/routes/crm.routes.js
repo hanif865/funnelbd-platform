@@ -19,26 +19,42 @@ function toGmt(d) {
   return new Date(d).toISOString().slice(0, 19).replace('T', ' ');
 }
 
-// Our status → CRM (WooCommerce-style) and back.
+// Our status → the CRM's own status labels (SafeCommerce custom statuses).
 const STATUS_TO_CRM = {
-  new: 'pending',
-  confirmed: 'processing',
-  shipped: 'processing',
-  delivered: 'completed',
-  cancelled: 'cancelled',
-  returned: 'refunded',
-  hold: 'on-hold',
+  new: 'Processing',
+  confirmed: 'Packaging',
+  shipped: 'Processing',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+  returned: 'Returned',
+  hold: 'On-Hold',
 };
+
+// CRM status → ours, matched case/space/hyphen-insensitively. The CRM's prep
+// stages (Delivery Charge / Packaging / Pre-Order / Processing) all collapse to
+// "confirmed"; terminal states map distinctly. WooCommerce names kept as a
+// fallback in case the CRM sends those.
+const norm = (s) => String(s || '').toLowerCase().replace(/[\s_-]+/g, '');
 const STATUS_FROM_CRM = {
-  pending: 'new',
+  deliverycharge: 'confirmed',
+  packaging: 'confirmed',
+  preorder: 'confirmed',
   processing: 'confirmed',
-  'on-hold': 'hold',
-  completed: 'delivered',
-  shipped: 'shipped',
+  onhold: 'hold',
   cancelled: 'cancelled',
-  refunded: 'returned',
+  canceled: 'cancelled',
+  delivered: 'delivered',
   returned: 'returned',
+  // WooCommerce-style fallbacks
+  pending: 'new',
+  completed: 'delivered',
+  refunded: 'returned',
   failed: 'cancelled',
+  // our own names (idempotent)
+  new: 'new',
+  confirmed: 'confirmed',
+  shipped: 'shipped',
+  hold: 'hold',
 };
 
 function secretOk(provided) {
@@ -156,7 +172,7 @@ router.post('/order-sync', async (req, res, next) => {
     const { secret, order_id, rev, status } = req.body || {};
     if (!secretOk(secret)) return res.status(401).json({ error: 'unauthorized' });
 
-    const ourStatus = STATUS_FROM_CRM[String(status || '').toLowerCase()];
+    const ourStatus = STATUS_FROM_CRM[norm(status)];
     const num = Number(order_id);
     if (!ourStatus || !num) return res.json({ ok: true }); // nothing actionable
 
