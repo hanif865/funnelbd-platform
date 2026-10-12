@@ -91,14 +91,18 @@ router.get('/orders', requireSecret, async (req, res, next) => {
     const since = parseSince(req.query.modified_since);
     if (since) q.updatedAt = { $gte: since };
 
-    const perPage = Math.min(Math.max(parseInt(req.query.per_page, 10) || 100, 1), 500);
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-
-    const rows = await Order.find(q)
-      .sort({ updatedAt: -1 })
-      .skip((page - 1) * perPage)
-      .limit(perPage)
-      .lean();
+    // Default (no page/per_page): return the FULL history so the CRM can
+    // backfill every order in one pass (safety-capped). When the CRM paginates
+    // (sends page/per_page), serve pages instead.
+    let query = Order.find(q).sort({ updatedAt: -1 });
+    if (req.query.page != null || req.query.per_page != null) {
+      const perPage = Math.min(Math.max(parseInt(req.query.per_page, 10) || 100, 1), 2000);
+      const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+      query = query.skip((page - 1) * perPage).limit(perPage);
+    } else {
+      query = query.limit(20000); // full dump, bounded so a huge store can't OOM
+    }
+    const rows = await query.lean();
 
     res.json({
       plugin_version: PLUGIN_VERSION,
