@@ -66,7 +66,7 @@ function CrmSyncCard() {
     catch { /* ignore */ } finally { setBusy(false); }
   }
   if (!c) return null;
-  const url = window.location.origin + c.basePath;
+  const url = c.feedUrl || (window.location.origin + (c.basePath || '/api/dizara/v1'));
 
   return (
     <div className="card">

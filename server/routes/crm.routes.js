@@ -358,7 +358,14 @@ export default router;
 /** Current CRM-sync status for the admin panel. */
 export async function getCrmStatus() {
   const s = (await getSetting('crmSync', null)) || {};
-  return { started: !!s.started, startedAt: s.startedAt || null, secretSet: !!SECRET, basePath: '/api/dizara/v1' };
+  const basePath = '/api/dizara/v1';
+  return {
+    started: !!s.started,
+    startedAt: s.startedAt || null,
+    secretSet: !!SECRET,
+    basePath,
+    feedUrl: (config.baseUrl || '').replace(/\/$/, '') + basePath,
+  };
 }
 /** Start/stop the CRM order sync (records the start moment). */
 export async function setCrmSync(started) {
