@@ -1,4 +1,4 @@
-import { getSetting, setSetting } from '../settings.service.js';
+import { getFunnelSetting, setFunnelSetting } from '../settings.service.js';
 
 /**
  * Tracking configuration lives in the `settings` collection under key
@@ -20,9 +20,12 @@ export const TRACKING_DEFAULTS = {
   tiktok: { enabled: false, pixelId: '', accessToken: '', testEventCode: '' },
 };
 
-/** Deep-merge stored config over defaults so new fields always exist. */
-export async function getTrackingConfig() {
-  const stored = (await getSetting(SETTING_KEY, {})) || {};
+/**
+ * Per-funnel tracking config (pixels/tokens), merged over defaults. Falls back
+ * to the shared global config when a funnel hasn't set its own.
+ */
+export async function getTrackingConfig(productId = null) {
+  const stored = (await getFunnelSetting(SETTING_KEY, productId, {})) || {};
   return {
     facebook: { ...TRACKING_DEFAULTS.facebook, ...(stored.facebook || {}) },
     google: { ...TRACKING_DEFAULTS.google, ...(stored.google || {}) },
@@ -30,8 +33,8 @@ export async function getTrackingConfig() {
   };
 }
 
-export async function saveTrackingConfig(next) {
-  return setSetting(SETTING_KEY, next);
+export async function saveTrackingConfig(next, productId = null) {
+  return setFunnelSetting(SETTING_KEY, productId, next);
 }
 
 /**

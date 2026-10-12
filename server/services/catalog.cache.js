@@ -61,6 +61,12 @@ export function invalidateCatalogCache() {
   generation++;
 }
 
+/** The default funnel's product id (first active product), or null. */
+export async function getDefaultProductId() {
+  const p = await Product.findOne({ active: true }).sort({ createdAt: 1 }).select('_id').lean();
+  return p ? p._id : null;
+}
+
 /** Active form fields for a funnel (or legacy/shared). Used at order validation. */
 export async function getFunnelFields(productId) {
   return FormField.find({ active: true, $or: [{ productId }, { productId: null }] }).sort({ order: 1 }).lean();
@@ -86,4 +92,4 @@ function deepFreeze(v) {
   return v;
 }
 
-export default { getCatalog, invalidateCatalogCache, getFunnelFields, findActiveOffer, findActiveZone };
+export default { getCatalog, invalidateCatalogCache, getFunnelFields, getDefaultProductId, findActiveOffer, findActiveZone };

@@ -35,8 +35,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── Per-platform send dispatch (fetches fresh config so tokens never sit in a
 //    queue payload). Returns the platform service's structured result. ──
-async function callPlatform(platform, eventName, eventInput) {
-  const cfg = await getTrackingConfig();
+async function callPlatform(platform, eventName, eventInput, productId) {
+  const cfg = await getTrackingConfig(productId);
 
   if (platform === 'facebook') {
     if (!cfg.facebook.enabled || !cfg.facebook.pixelId || !cfg.facebook.accessToken) {
@@ -66,13 +66,13 @@ async function callPlatform(platform, eventName, eventInput) {
  * @param {object} job { platform, eventName, eventId, orderId, eventInput }
  */
 export async function runTrackingJob(job) {
-  const { platform, eventName, eventId, orderId, eventInput } = job;
+  const { platform, eventName, eventId, orderId, eventInput, productId } = job;
 
   let result;
   let attempts = 0;
   for (let i = 1; i <= MAX_ATTEMPTS; i++) {
     attempts = i;
-    result = await callPlatform(platform, eventName, eventInput);
+    result = await callPlatform(platform, eventName, eventInput, productId);
     if (result.ok || result.skipped) break;
     if (i < MAX_ATTEMPTS) await sleep(RETRY_DELAY_MS * i);
   }
@@ -209,6 +209,8 @@ export function buildPurchaseJobs(order, sourceUrl) {
     });
   }
 
+  // Each job carries its funnel so the worker sends with that funnel's pixels.
+  jobs.forEach((j) => { j.productId = order.productId || null; });
   return jobs;
 }
 
@@ -217,7 +219,7 @@ export function buildPurchaseJobs(order, sourceUrl) {
  * only (GA4 handled by gtag on the browser). Identifiers are whatever the
  * browser + request could supply — usually weaker than at purchase.
  */
-export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}, orderId = null }) {
+export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}, orderId = null, productId = null }) {
   const map = EVENT_MAP[moment];
   if (!map) return [];
   // The browser sends the real page URL (custom.sourceUrl); fall back to baseUrl.
@@ -265,6 +267,7 @@ export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}
     });
   }
 
+  jobs.forEach((j) => { j.productId = productId || null; });
   return jobs;
 }
 

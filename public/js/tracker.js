@@ -208,7 +208,8 @@
         headers: { 'Content-Type': 'application/json' },
         keepalive: true,
         // sourceUrl = the real page URL (e.g. main domain) for event_source_url.
-        body: JSON.stringify(Object.assign({ moment: moment, eventId: eventId, sourceUrl: location.origin + location.pathname }, extra || {})),
+        // productId = which funnel fired this, so the server sends with its pixels.
+        body: JSON.stringify(Object.assign({ moment: moment, eventId: eventId, sourceUrl: location.origin + location.pathname, productId: F.productId }, extra || {})),
       }).catch(function () {});
     } catch (e) {}
   }

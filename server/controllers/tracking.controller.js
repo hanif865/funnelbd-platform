@@ -4,11 +4,19 @@ import {
   saveTrackingConfig,
   toAdminConfig,
 } from '../services/tracking/config.js';
+import { getDefaultProductId } from '../services/catalog.cache.js';
+
+// Which funnel's tracking to edit. Until the admin gets a funnel selector
+// (multi-funnel Phase 4), this is the default funnel; a ?funnel=<id> can target
+// another one.
+async function targetFunnel(req) {
+  return req.query.funnel || (await getDefaultProductId());
+}
 
 /** GET /api/admin/tracking → config with tokens masked. */
 export async function getTracking(req, res, next) {
   try {
-    const cfg = await getTrackingConfig();
+    const cfg = await getTrackingConfig(await targetFunnel(req));
     res.json({ tracking: toAdminConfig(cfg) });
   } catch (err) {
     next(err);
@@ -32,7 +40,8 @@ function resolveSecret(incoming, stored) {
  */
 export async function updateTracking(req, res, next) {
   try {
-    const cur = await getTrackingConfig();
+    const pid = await targetFunnel(req);
+    const cur = await getTrackingConfig(pid);
     const b = req.body || {};
 
     const next = {
@@ -57,7 +66,7 @@ export async function updateTracking(req, res, next) {
       },
     };
 
-    await saveTrackingConfig(next);
+    await saveTrackingConfig(next, pid);
     res.json({ ok: true, tracking: toAdminConfig(next) });
   } catch (err) {
     next(err);

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { IncompleteOrder, DailyStat } from '../models/index.js';
-import { getSettings } from '../services/settings.service.js';
+import { getSettings, getFunnelSetting } from '../services/settings.service.js';
 import { getCatalog, findActiveOffer } from '../services/catalog.cache.js';
 import { storePhoneLinks } from '../services/storeInfo.js';
 import { buildSrcset, thumbUrl } from '../services/image.service.js';
@@ -99,17 +99,22 @@ function seenRecently(key) {
 export async function renderLanding(req, res, next) {
   try {
     const slug = req.params.slug || null;
-    const [catalog, settings, trackingCfg] = await Promise.all([
-      getCatalog(slug),
-      getSettings(['storeInfo', 'freeDelivery']),
-      getTrackingConfig(),
-    ]);
     // An unknown slug falls back to the default funnel rather than 404ing.
-    let { product, offers, fields, zones } = catalog;
+    let { product, offers, fields, zones } = await getCatalog(slug);
     if (!product && slug) ({ product, offers, fields, zones } = await getCatalog(null));
     if (!product) {
       return res.status(503).send('কোনো প্রোডাক্ট কনফিগার করা হয়নি। অ্যাডমিন প্যানেল থেকে যোগ করুন।');
     }
+
+    // Per-funnel store info / free-delivery / tracking (falls back to the shared
+    // global config until this funnel sets its own).
+    const pid = product._id;
+    const [storeInfo, freeDelivery, trackingCfg] = await Promise.all([
+      getFunnelSetting('storeInfo', pid, {}),
+      getFunnelSetting('freeDelivery', pid, { enabled: false, threshold: 0, allFree: false }),
+      getTrackingConfig(pid),
+    ]);
+    const settings = { storeInfo, freeDelivery };
 
     // Traffic counter for the dashboard conversion rate (fire-and-forget).
     DailyStat.track(req.isNewSession).catch((e) => reportError('traffic-stat', e));
@@ -123,7 +128,7 @@ export async function renderLanding(req, res, next) {
       fields,
       zones,
       settings,
-      storePhones: storePhoneLinks(settings.storeInfo),
+      storePhones: storePhoneLinks(storeInfo),
       imgSrcset: buildSrcset, // (url) → responsive srcset string, or '' if none
       imgThumb: thumbUrl, // (url) → small variant URL for fixed thumbnails
 
@@ -281,7 +286,7 @@ export async function saveDraft(req, res) {
  */
 export async function trackMoment(req, res) {
   try {
-    const { moment, eventId, fields = {}, custom = {}, sourceUrl } = req.body || {};
+    const { moment, eventId, fields = {}, custom = {}, sourceUrl, productId } = req.body || {};
     if (!['pageview', 'add_to_cart', 'initiate'].includes(moment) || !eventId) {
       return res.status(204).end();
     }
@@ -312,6 +317,7 @@ export async function trackMoment(req, res) {
       moment,
       eventId,
       identifiers,
+      productId: typeof productId === 'string' ? productId : null,
       custom: {
         value: typeof custom.value === 'number' ? custom.value : undefined,
         contentIds: Array.isArray(custom.contentIds) ? custom.contentIds.slice(0, 10) : undefined,

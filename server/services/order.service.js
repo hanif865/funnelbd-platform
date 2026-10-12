@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { Order, Counter, IncompleteOrder } from '../models/index.js';
-import { getSettings } from './settings.service.js';
+import { getSettings, getFunnelSetting } from './settings.service.js';
 import { getCatalog, getFunnelFields, findActiveOffer, findActiveZone } from './catalog.cache.js';
 import { normalizePhone, isValidBDPhone } from '../utils/phone.js';
 
@@ -55,7 +55,8 @@ export async function calculatePricing({ offer: offerIn, offerId, quantity, deli
   const qty = Math.max(1, Math.floor(Number(quantity) || 1));
   const subtotal = offer.price * qty;
 
-  const { freeDelivery } = await getSettings(['freeDelivery']);
+  // Free-delivery rules are per funnel (fall back to the shared global config).
+  const freeDelivery = await getFunnelSetting('freeDelivery', offer.productId, { enabled: false, threshold: 0, allFree: false });
   const deliveryCharge = computeDeliveryCharge(zone.charge, subtotal, freeDelivery);
   const validDiscount = Math.max(0, Math.min(Number(discount) || 0, 100));
   const total = Math.max(0, subtotal + deliveryCharge - validDiscount);

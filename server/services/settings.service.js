@@ -60,4 +60,22 @@ export async function setSetting(key, value) {
   return value;
 }
 
+/**
+ * Per-funnel setting: reads `<key>:<productId>`, falling back to the global
+ * `<key>` (so a funnel inherits the old shared value until it sets its own),
+ * then the given default.
+ */
+export async function getFunnelSetting(key, productId, fallback = null) {
+  const map = await loadAll();
+  const scoped = productId ? `${key}:${productId}` : null;
+  if (scoped && scoped in map) return copy(map[scoped]);
+  if (key in map) return copy(map[key]);
+  return fallback;
+}
+
+/** Upsert a per-funnel setting value under `<key>:<productId>`. */
+export async function setFunnelSetting(key, productId, value) {
+  return setSetting(productId ? `${key}:${productId}` : key, value);
+}
+
 export default { getSetting, getSettings, setSetting, invalidateSettingsCache };

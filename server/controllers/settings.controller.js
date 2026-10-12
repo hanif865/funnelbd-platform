@@ -1,7 +1,14 @@
-import { getSettings, setSetting } from '../services/settings.service.js';
+import { getSettings, setSetting, getFunnelSetting, setFunnelSetting } from '../services/settings.service.js';
 import { getSmsConfig, SMS_DEFAULTS } from '../services/sms.service.js';
 import { getCourierConfig, saveCourierConfig, COURIER_DEFAULTS } from '../services/courier.service.js';
 import { normalizeStoreInfo } from '../services/storeInfo.js';
+import { getDefaultProductId } from '../services/catalog.cache.js';
+
+// storeInfo + freeDelivery are per funnel; until the funnel selector lands
+// (Phase 4) the admin edits the default funnel (or ?funnel=<id>).
+async function targetFunnel(req) {
+  return req.query.funnel || (await getDefaultProductId());
+}
 
 const COOLDOWN_DEFAULT = {
   enabled: true,
@@ -18,12 +25,17 @@ function maskKey(k) {
 /** GET /api/admin/settings → general settings (SMS api key masked). */
 export async function getGeneralSettings(req, res, next) {
   try {
-    const s = await getSettings(['duplicateCooldown', 'freeDelivery', 'storeInfo']);
-    const sms = await getSmsConfig();
+    const pid = await targetFunnel(req);
+    const s = await getSettings(['duplicateCooldown']);
+    const [freeDelivery, storeInfo, sms] = await Promise.all([
+      getFunnelSetting('freeDelivery', pid, null),
+      getFunnelSetting('storeInfo', pid, null),
+      getSmsConfig(),
+    ]);
     res.json({
       duplicateCooldown: s.duplicateCooldown || COOLDOWN_DEFAULT,
-      freeDelivery: s.freeDelivery || FREE_DELIVERY_DEFAULT,
-      storeInfo: normalizeStoreInfo(s.storeInfo),
+      freeDelivery: freeDelivery || FREE_DELIVERY_DEFAULT,
+      storeInfo: normalizeStoreInfo(storeInfo),
       sms: { ...sms, apiKey: maskKey(sms.apiKey), apiKeySet: !!sms.apiKey },
     });
   } catch (err) {
@@ -38,6 +50,7 @@ export async function getGeneralSettings(req, res, next) {
 export async function updateGeneralSettings(req, res, next) {
   try {
     const b = req.body || {};
+    const pid = await targetFunnel(req);
 
     if (b.duplicateCooldown) {
       await setSetting('duplicateCooldown', {
@@ -47,14 +60,14 @@ export async function updateGeneralSettings(req, res, next) {
       });
     }
     if (b.freeDelivery) {
-      await setSetting('freeDelivery', {
+      await setFunnelSetting('freeDelivery', pid, {
         enabled: !!b.freeDelivery.enabled,
         threshold: Number(b.freeDelivery.threshold) || 0,
         allFree: !!b.freeDelivery.allFree,
       });
     }
     if (b.storeInfo) {
-      await setSetting('storeInfo', normalizeStoreInfo(b.storeInfo));
+      await setFunnelSetting('storeInfo', pid, normalizeStoreInfo(b.storeInfo));
     }
     if (b.sms) {
       const cur = await getSmsConfig();
