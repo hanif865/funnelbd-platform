@@ -9,6 +9,9 @@ export const FIELD_TYPES = ['text', 'number', 'textarea', 'radio', 'select', 'ch
  */
 const formFieldSchema = new mongoose.Schema(
   {
+    // Which funnel (product) this field belongs to. Null = legacy/shared until
+    // the default-funnel migration stamps it.
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null, index: true },
     label: { type: String, required: true, trim: true },
     // machine name used as the key in orders.customFields (and for core fields
     // maps to customer.{name,phone,address}). lowercase, no spaces.

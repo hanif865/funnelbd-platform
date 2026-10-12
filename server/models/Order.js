@@ -32,6 +32,10 @@ const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: Number, required: true, unique: true },
 
+    // The funnel (product) this order came from. Stamped from the offer at
+    // creation; backfilled for old orders by the default-funnel migration.
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null, index: true },
+
     customer: {
       name: { type: String, required: true, trim: true },
       phone: { type: String, required: true, trim: true }, // normalized 8801XXXXXXXXX

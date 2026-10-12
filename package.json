@@ -16,6 +16,7 @@
     "seed": "node server/scripts/seed.js",
     "incomplete:dedupe": "node server/scripts/dedupe-incomplete.js",
     "analytics:reset": "node server/scripts/reset-section-analytics.js",
+    "funnel:migrate": "node server/scripts/assign-default-funnel.js",
     "images:optimize": "node server/scripts/optimize-images.js",
     "images:variants": "node server/scripts/regenerate-image-variants.js",
     "admin:dev": "npm --prefix admin-panel run dev",
