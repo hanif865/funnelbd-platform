@@ -54,6 +54,36 @@ function StorePhones({ phones, onChange }) {
   );
 }
 
+// ─── CRM order sync (SafeCommerce) ───────────────────────
+function CrmSyncCard() {
+  const [c, setC] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api('/crm').then(setC).catch(() => {}); }, []);
+
+  async function toggle(started) {
+    setBusy(true);
+    try { setC(await api('/crm/sync', { method: 'POST', body: { started } })); }
+    catch { /* ignore */ } finally { setBusy(false); }
+  }
+  if (!c) return null;
+  const url = window.location.origin + c.basePath;
+
+  return (
+    <div className="card">
+      <h3>CRM order sync</h3>
+      <div className="kv"><span>Feed URL</span><b style={{ fontFamily: 'monospace', fontSize: '.82rem', wordBreak: 'break-all' }}>{url}</b></div>
+      <div className="kv"><span>Secret</span><b>{c.secretSet ? <span className="ok-text">✓ configured</span> : <span className="err">not set — add CRM_INGEST_SECRET in .env</span>}</b></div>
+      <div className="kv"><span>Status</span><b>{c.started ? <span className="ok-text">Running{c.startedAt ? ' since ' + new Date(c.startedAt).toLocaleString('en-GB') : ''}</span> : 'Stopped'}</b></div>
+      <p className="muted" style={{ marginTop: 6 }}>Only orders placed after you start are sent to the CRM. Put this URL + secret into the CRM store settings.</p>
+      <div className="save-bar">
+        {c.started
+          ? <button className="btn-ghost danger" disabled={busy} onClick={() => toggle(false)}>Stop sync</button>
+          : <button className="btn-primary" disabled={busy || !c.secretSet} onClick={() => toggle(true)}>Start order sync</button>}
+      </div>
+    </div>
+  );
+}
+
 // ─── General ─────────────────────────────────────────────
 function GeneralTab() {
   const [s, setS] = useState(null);
@@ -75,6 +105,7 @@ function GeneralTab() {
   if (!s) return <p className="muted">Loading…</p>;
   return (
     <div>
+      <CrmSyncCard />
       <div className="card">
         <h3>Duplicate-order cooldown</h3>
         <label className="cbx"><input type="checkbox" checked={s.duplicateCooldown.enabled} onChange={(e) => upd('duplicateCooldown', { enabled: e.target.checked })} /> Enabled</label>

@@ -62,6 +62,7 @@ import { handleUpload } from '../controllers/upload.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 import { invalidateCatalogCache } from '../services/catalog.cache.js';
 import { invalidateSettingsCache } from '../services/settings.service.js';
+import { getCrmStatus, setCrmSync } from './crm.routes.js';
 
 const router = Router();
 
@@ -133,6 +134,14 @@ router.put('/settings', requireAdmin, requireRole('admin'), updateGeneralSetting
 // ── Courier config (admin-only) ──────────────────────
 router.get('/courier', requireAdmin, requireRole('admin'), getCourierSettings);
 router.put('/courier', requireAdmin, requireRole('admin'), updateCourierSettings);
+
+// ── CRM order sync start/stop (admin-only) ───────────
+router.get('/crm', requireAdmin, requireRole('admin'), async (req, res, next) => {
+  try { res.json(await getCrmStatus()); } catch (e) { next(e); }
+});
+router.post('/crm/sync', requireAdmin, requireRole('admin'), async (req, res, next) => {
+  try { res.json(await setCrmSync(!!(req.body && req.body.started))); } catch (e) { next(e); }
+});
 
 // ── Panel users / staff roles (admin-only) ───────────
 router.get('/users', requireAdmin, requireRole('admin'), listUsers);
