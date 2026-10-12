@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { IncompleteOrder, DailyStat } from '../models/index.js';
 import { getSettings } from '../services/settings.service.js';
-import { getCatalog } from '../services/catalog.cache.js';
+import { getCatalog, findActiveOffer } from '../services/catalog.cache.js';
 import { storePhoneLinks } from '../services/storeInfo.js';
 import { buildSrcset, thumbUrl } from '../services/image.service.js';
 import {
@@ -98,11 +98,15 @@ function seenRecently(key) {
  */
 export async function renderLanding(req, res, next) {
   try {
-    const [{ product, offers, fields, zones }, settings, trackingCfg] = await Promise.all([
-      getCatalog(),
+    const slug = req.params.slug || null;
+    const [catalog, settings, trackingCfg] = await Promise.all([
+      getCatalog(slug),
       getSettings(['storeInfo', 'freeDelivery']),
       getTrackingConfig(),
     ]);
+    // An unknown slug falls back to the default funnel rather than 404ing.
+    let { product, offers, fields, zones } = catalog;
+    if (!product && slug) ({ product, offers, fields, zones } = await getCatalog(null));
     if (!product) {
       return res.status(503).send('কোনো প্রোডাক্ট কনফিগার করা হয়নি। অ্যাডমিন প্যানেল থেকে যোগ করুন।');
     }
@@ -246,6 +250,11 @@ export async function saveDraft(req, res) {
     if (phone) {
       set.phone = phone;
       set.phoneValid = true;
+    }
+    // Stamp the funnel (from the chosen offer) so the incomplete order is scoped.
+    if (offerId) {
+      const off = await findActiveOffer(offerId);
+      if (off?.productId) set.productId = off.productId;
     }
 
     await IncompleteOrder.updateOne(

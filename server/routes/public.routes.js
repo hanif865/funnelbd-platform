@@ -18,7 +18,9 @@ const exitLeadLimit = rateLimit({ windowMs: 10 * MIN, max: 20 });
 const draftLimit = rateLimit({ windowMs: MIN, max: 120, silent: true });
 const beaconLimit = rateLimit({ windowMs: MIN, max: 300, silent: true });
 
-// Landing page (server-rendered). Supports root, Facebook Ads path, and checkout.
+// Landing page (server-rendered). The default funnel keeps the legacy paths
+// (ads point at /funnel-step/checkout/). These literals are registered first so
+// "checkout" is never captured as a slug.
 const landingPaths = [
   '/',
   '/funnel-step/checkout',
@@ -27,6 +29,11 @@ const landingPaths = [
   '/checkout/',
 ];
 landingPaths.forEach((path) => {
+  router.get(path, renderLanding);
+});
+
+// Per-funnel landing by slug: /funnel-step/<slug>/ (+ an explicit /checkout form).
+['/funnel-step/:slug', '/funnel-step/:slug/', '/funnel-step/:slug/checkout', '/funnel-step/:slug/checkout/'].forEach((path) => {
   router.get(path, renderLanding);
 });
 

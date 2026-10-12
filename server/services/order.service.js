@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import { Order, Counter, IncompleteOrder } from '../models/index.js';
 import { getSettings } from './settings.service.js';
-import { getCatalog, findActiveOffer, findActiveZone } from './catalog.cache.js';
+import { getCatalog, getFunnelFields, findActiveOffer, findActiveZone } from './catalog.cache.js';
 import { normalizePhone, isValidBDPhone } from '../utils/phone.js';
 
 /**
@@ -43,8 +43,8 @@ export function computeDeliveryCharge(zoneCharge, subtotal, freeDelivery) {
  * Pricing model: an offer is a card (e.g. "2 pcs — 1,099৳"); the quantity
  * stepper multiplies that card. subtotal = offer.price × quantity.
  */
-export async function calculatePricing({ offerId, quantity, deliveryZoneId, discount = 0 }) {
-  const offer = await findActiveOffer(offerId);
+export async function calculatePricing({ offer: offerIn, offerId, quantity, deliveryZoneId, discount = 0 }) {
+  const offer = offerIn || (await findActiveOffer(offerId));
   if (!offer) throw new OrderValidationError('নির্বাচিত অফারটি এখন আর নেই।', { offerId: 'invalid' });
 
   const zone = await findActiveZone(deliveryZoneId);
@@ -68,8 +68,8 @@ export async function calculatePricing({ offerId, quantity, deliveryZoneId, disc
  * Splits answers into the three core customer fields and the rest
  * (customFields). Enforces required + phone format server-side.
  */
-export async function validateFields(fields = {}) {
-  const { fields: defs } = await getCatalog();
+export async function validateFields(fields = {}, productId = null) {
+  const defs = productId ? await getFunnelFields(productId) : (await getCatalog()).fields;
   const errors = {};
   const customer = {};
   const customFields = {};
@@ -150,7 +150,13 @@ export async function findDuplicate(phone) {
  * Throws OrderValidationError (→ 422) or DuplicateOrderError (→ polite 200).
  */
 export async function createOrder(payload, meta = {}) {
-  const { customer, customFields, customFieldLabels, variantSummary } = await validateFields(payload.fields);
+  // Resolve the offer first so we know which funnel this order belongs to, and
+  // validate the form against that funnel's fields.
+  const offer = await findActiveOffer(payload.offerId);
+  if (!offer) throw new OrderValidationError('নির্বাচিত অফারটি এখন আর নেই।', { offerId: 'invalid' });
+  const productId = offer.productId || null;
+
+  const { customer, customFields, customFieldLabels, variantSummary } = await validateFields(payload.fields, productId);
 
   // Duplicate check before we spend an order number. Admin "convert to order"
   // passes skipDuplicateCheck since the admin is deliberately creating it.
@@ -161,7 +167,7 @@ export async function createOrder(payload, meta = {}) {
   }
 
   const pricing = await calculatePricing({
-    offerId: payload.offerId,
+    offer,
     quantity: payload.quantity,
     deliveryZoneId: payload.deliveryZoneId,
     discount: payload.discount || 0,
@@ -172,6 +178,7 @@ export async function createOrder(payload, meta = {}) {
 
   const order = await Order.create({
     orderNumber,
+    productId,
     customer,
     customFields,
     customFieldLabels,
