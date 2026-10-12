@@ -55,6 +55,7 @@ export async function createOffer(req, res, next) {
     const offer = await Offer.create({
       productId: product?._id,
       title: String(b.title || '').trim(),
+      sku: String(b.sku || '').trim(),
       price: Number(b.price) || 0,
       comparePrice: b.comparePrice != null ? Number(b.comparePrice) : null,
       quantity: Number(b.quantity) || 1,
@@ -76,7 +77,7 @@ export async function updateOffer(req, res, next) {
     const b = req.body || {};
     const offer = await Offer.findById(req.params.id);
     if (!offer) return res.status(404).json({ error: 'Offer not found.' });
-    ['title', 'image', 'badge'].forEach((k) => { if (b[k] !== undefined) offer[k] = b[k]; });
+    ['title', 'image', 'badge', 'sku'].forEach((k) => { if (b[k] !== undefined) offer[k] = b[k]; });
     if (b.price !== undefined) offer.price = Number(b.price) || 0;
     if (b.comparePrice !== undefined) offer.comparePrice = b.comparePrice != null && b.comparePrice !== '' ? Number(b.comparePrice) : null;
     if (b.quantity !== undefined) offer.quantity = Number(b.quantity) || 1;

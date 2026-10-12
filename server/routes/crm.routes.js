@@ -104,6 +104,11 @@ router.get('/orders', requireSecret, async (req, res, next) => {
     }
     const rows = await query.lean();
 
+    // Resolve each offer's SKU (readable product code) once; fall back to the id.
+    const skuById = Object.fromEntries(
+      (await Offer.find().select('sku').lean()).map((o) => [String(o._id), o.sku || ''])
+    );
+
     res.json({
       plugin_version: PLUGIN_VERSION,
       orders: rows.map((o) => ({
@@ -112,7 +117,7 @@ router.get('/orders', requireSecret, async (req, res, next) => {
         customer_name: o.customer?.name || '',
         phone: o.customer?.phone || '',
         address: o.customer?.address || '',
-        line_items: lineItems(o.offerTitle, o.offerId, o.quantity),
+        line_items: lineItems(o.offerTitle, skuById[String(o.offerId)] || o.offerId, o.quantity),
         size_color: o.variantSummary || '',
         total: o.total,
         date_created: toGmt(o.createdAt),
@@ -130,7 +135,7 @@ router.get('/incomplete-orders', requireSecret, async (req, res, next) => {
     const rows = await IncompleteOrder.find({ status: { $in: ['new', 'called'] }, phoneValid: true })
       .sort({ lastActivityAt: -1 })
       .limit(500)
-      .populate('offerId', 'title')
+      .populate('offerId', 'title sku')
       .lean();
 
     res.json(
@@ -139,7 +144,7 @@ router.get('/incomplete-orders', requireSecret, async (req, res, next) => {
         name: c.data?.name || '',
         phone: c.phone || c.data?.phone || '',
         address: c.data?.address || '',
-        line_items: c.offerId ? lineItems(c.offerId.title, c.offerId._id, c.data?.quantity || 1) : [],
+        line_items: c.offerId ? lineItems(c.offerId.title, c.offerId.sku || c.offerId._id, c.data?.quantity || 1) : [],
         created_at: toGmt(c.firstSeenAt || c.createdAt),
       }))
     );
@@ -155,7 +160,7 @@ router.get('/products', requireSecret, async (req, res, next) => {
     res.json(
       rows.map((p) => ({
         product_id: String(p._id),
-        sku: String(p._id),
+        sku: p.sku || String(p._id),
         name: p.title,
         price: p.price,
         stock_quantity: null, // this funnel doesn't track stock

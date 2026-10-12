@@ -10,6 +10,7 @@ const offerSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     title: { type: String, required: true, trim: true },
+    sku: { type: String, default: '', trim: true }, // product code sent to the CRM (falls back to _id)
     price: { type: Number, required: true, min: 0 },
     comparePrice: { type: Number, default: null, min: 0 },
     quantity: { type: Number, default: 1, min: 1 },

@@ -68,7 +68,7 @@ function OfferModal({ offer, onClose, onSaved }) {
     const body = {
       title: o.title, price: Number(o.price) || 0,
       comparePrice: o.comparePrice === '' || o.comparePrice == null ? null : Number(o.comparePrice),
-      quantity: Number(o.quantity) || 1, badge: o.badge, image: o.image,
+      quantity: Number(o.quantity) || 1, badge: o.badge, image: o.image, sku: o.sku || '',
       isDefault: !!o.isDefault, active: o.active !== false,
     };
     try {
@@ -92,6 +92,7 @@ function OfferModal({ offer, onClose, onSaved }) {
           <div className="fld"><label>Piece count</label><input type="number" value={o.quantity} onChange={(e) => setO({ ...o, quantity: e.target.value })} /></div>
           <div className="fld"><label>Badge text</label><input value={o.badge || ''} onChange={(e) => setO({ ...o, badge: e.target.value })} placeholder="e.g. Save more!" /></div>
         </div>
+        <div className="fld"><label>Product code / SKU <span className="muted">(sent to the CRM; optional)</span></label><input value={o.sku || ''} onChange={(e) => setO({ ...o, sku: e.target.value })} placeholder="e.g. BELT-2PC" /></div>
         <div className="fld"><label>Offer image (optional)</label><ImageUploader value={o.image} onChange={(url) => setO({ ...o, image: url })} /></div>
         <label className="cbx"><input type="checkbox" checked={!!o.isDefault} onChange={(e) => setO({ ...o, isDefault: e.target.checked })} /> Selected by default</label>
         <label className="cbx" style={{ marginTop: 6 }}><input type="checkbox" checked={o.active !== false} onChange={(e) => setO({ ...o, active: e.target.checked })} /> Active</label>
