@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { EventLog, EVENT_PLATFORMS, EVENT_STATUSES } from '../models/index.js';
 import {
   getTrackingConfig,
@@ -79,16 +80,19 @@ export async function updateTracking(req, res, next) {
  */
 export async function listEventLogs(req, res, next) {
   try {
-    const { platform, status } = req.query;
+    const { platform, status, funnel } = req.query;
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '100', 10)));
 
-    const filter = {};
+    const funnelMatch = funnel && mongoose.isValidObjectId(funnel)
+      ? { productId: new mongoose.Types.ObjectId(funnel) }
+      : {};
+    const filter = { ...funnelMatch };
     if (platform && EVENT_PLATFORMS.includes(platform)) filter.platform = platform;
     if (status && EVENT_STATUSES.includes(status)) filter.status = status;
 
     const [events, counts] = await Promise.all([
       EventLog.find(filter).sort({ createdAt: -1 }).limit(limit).lean(),
-      EventLog.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      EventLog.aggregate([{ $match: funnelMatch }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     ]);
 
     res.json({

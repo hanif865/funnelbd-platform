@@ -13,6 +13,7 @@ const eventLogSchema = new mongoose.Schema(
     eventName: { type: String, required: true }, // Purchase, InitiateCheckout...
     eventId: { type: String, default: '' },
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }, // which funnel fired it
     payload: { type: mongoose.Schema.Types.Mixed, default: {} },
     status: { type: String, enum: EVENT_STATUSES, default: 'pending' },
     response: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -29,6 +30,7 @@ const eventLogSchema = new mongoose.Schema(
 export const EVENT_LOG_TTL_DAYS = 30;
 eventLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: EVENT_LOG_TTL_DAYS * 24 * 60 * 60 });
 eventLogSchema.index({ platform: 1, status: 1 });
+eventLogSchema.index({ productId: 1, createdAt: -1 });
 
 export const EventLog = mongoose.model('EventLog', eventLogSchema);
 export default EventLog;

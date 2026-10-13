@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
-import { useFunnelApi } from '../funnel.jsx';
+import { useFunnelApi, FunnelFilter, useFunnel } from '../funnel.jsx';
 import { fmtDate } from '../constants.js';
 import { Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
@@ -132,8 +132,9 @@ function Secret({ label, set, onChange }) {
 
 // ─── Event Log ──────────────────────────────────────────────
 function EventLog() {
+  const { nameOf, multi } = useFunnel();
   const [data, setData] = useState({ events: [], statusCounts: {} });
-  const [filters, setFilters] = useState({ platform: '', status: '' });
+  const [filters, setFilters] = useState({ platform: '', status: '', funnel: '' });
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(null);
 
@@ -154,6 +155,7 @@ function EventLog() {
   return (
     <div>
       <div className="log-toolbar">
+        <FunnelFilter value={filters.funnel} onChange={(v) => setFilters((f) => ({ ...f, funnel: v }))} />
         <select value={filters.platform} onChange={(e) => setFilters((f) => ({ ...f, platform: e.target.value }))}>
           <option value="">All platforms</option>
           <option value="facebook">Facebook</option>
@@ -179,12 +181,13 @@ function EventLog() {
         <div className="table-wrap">
           <table className="table">
             <thead>
-              <tr><th>Time</th><th>Platform</th><th>Event</th><th>Status</th><th className="num">Attempts</th><th>Details</th></tr>
+              <tr><th>Time</th>{multi && <th>Funnel</th>}<th>Platform</th><th>Event</th><th>Status</th><th className="num">Attempts</th><th>Details</th></tr>
             </thead>
             <tbody>
               {events.map((e) => (
                 <tr key={e._id}>
                   <td className="muted">{fmtDate(e.createdAt)}</td>
+                  {multi && <td>{nameOf(e.productId) ? <Pill color="#7c3aed">{nameOf(e.productId)}</Pill> : <span className="muted">—</span>}</td>}
                   <td>{e.platform}</td>
                   <td>{e.eventName}</td>
                   <td>

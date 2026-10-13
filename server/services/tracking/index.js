@@ -85,6 +85,7 @@ export async function runTrackingJob(job) {
     eventName,
     eventId,
     orderId: orderId || null,
+    productId: productId || null,
     payload: result.payload || eventInput,
     status: result.ok ? 'success' : 'failed',
     response: result.response ?? null,
