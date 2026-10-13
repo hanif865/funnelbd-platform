@@ -39,10 +39,11 @@ async function soleAccountId() {
   return accounts.length === 1 ? accounts[0]._id : null;
 }
 
-export async function resolveAccountId(host) {
+/** Resolve the host to { accountId, suspended } (suspended drives public gating). */
+async function lookup(host) {
   const h = cleanHost(host);
   const cached = cache.get(h);
-  if (cached && cached.expiresAt > Date.now()) return cached.accountId;
+  if (cached && cached.expiresAt > Date.now()) return cached;
 
   let accountId = null;
   if (h) {
@@ -52,22 +53,52 @@ export async function resolveAccountId(host) {
   } else {
     accountId = await soleAccountId();
   }
-  cache.set(h, { accountId, expiresAt: Date.now() + TTL_MS });
-  return accountId;
+
+  let suspended = false;
+  if (accountId) {
+    const acc = await Account.findById(accountId).select('status').lean();
+    if (!acc) accountId = null;
+    else suspended = acc.status === 'suspended';
+  }
+
+  const entry = { accountId, suspended, expiresAt: Date.now() + TTL_MS };
+  cache.set(h, entry);
+  return entry;
 }
 
-/** Express middleware: sets req.publicAccountId from the Host header. */
+export async function resolveAccountId(host) {
+  return (await lookup(host)).accountId;
+}
+
+/** Express middleware: sets req.publicAccountId + req.publicAccountSuspended. */
 export async function resolvePublicAccount(req, _res, next) {
   try {
-    req.publicAccountId = await resolveAccountId(req.headers.host);
+    const { accountId, suspended } = await lookup(req.headers.host);
+    req.publicAccountId = accountId;
+    req.publicAccountSuspended = suspended;
   } catch {
     req.publicAccountId = null;
+    req.publicAccountSuspended = false;
   }
   next();
 }
 
-export function invalidateDomainCache() {
-  cache = new Map();
+// Account status cache (admin-side suspension gating), cleared with the domain cache.
+let acctStatusCache = new Map(); // accountId → { status, expiresAt }
+export async function getAccountStatus(accountId) {
+  if (!accountId) return null;
+  const k = String(accountId);
+  const c = acctStatusCache.get(k);
+  if (c && c.expiresAt > Date.now()) return c.status;
+  const acc = await Account.findById(accountId).select('status').lean();
+  const status = acc ? acc.status : 'missing';
+  acctStatusCache.set(k, { status, expiresAt: Date.now() + 30 * 1000 });
+  return status;
 }
 
-export default { resolveAccountId, resolvePublicAccount, invalidateDomainCache, verifyTxtOwnership, CHALLENGE_PREFIX };
+export function invalidateDomainCache() {
+  cache = new Map();
+  acctStatusCache = new Map();
+}
+
+export default { resolveAccountId, resolvePublicAccount, invalidateDomainCache, getAccountStatus, verifyTxtOwnership, CHALLENGE_PREFIX };

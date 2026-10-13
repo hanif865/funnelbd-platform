@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { api, setToken, getToken } from './api.js';
+import { api, setToken, getToken, setImpersonate } from './api.js';
 
 const AuthContext = createContext(null);
 
@@ -61,6 +61,7 @@ export function AuthProvider({ children }) {
       /* ignore */
     }
     setToken('');
+    setImpersonate('');
     setAdmin(null);
   }
 

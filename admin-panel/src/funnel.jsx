@@ -11,7 +11,7 @@ const FunnelCtx = createContext(null);
 
 export function FunnelProvider({ children }) {
   const { admin } = useAuth();
-  const isAdmin = admin?.role === 'admin';
+  const isAdmin = admin?.role === 'admin' || admin?.role === 'superadmin';
   const [funnels, setFunnels] = useState([]);
   const [funnelId, setFunnelIdState] = useState(() => localStorage.getItem(KEY) || '');
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
 import { useFunnel } from '../funnel.jsx';
+import { getImpersonate, setImpersonate } from '../api.js';
 import { useSystemHealth, SystemBanner } from './SystemHealth.jsx';
 import Icon from './Icon.jsx';
 
@@ -69,7 +70,20 @@ export default function Layout() {
   const sys = useSystemHealth();
   const dbDown = sys.unreachable || (sys.health && sys.health.db?.state !== 'connected');
   const badgeCount = sys.unseen.length + (dbDown ? 1 : 0);
-  const isAdmin = admin?.role === 'admin';
+  const isSuperadmin = admin?.role === 'superadmin';
+  const isAdmin = admin?.role === 'admin' || isSuperadmin; // superadmin can do admin things
+  const impersonating = isSuperadmin && getImpersonate();
+  const impName = impersonating ? (localStorage.getItem('fbd_admin_impersonate_name') || 'a client account') : '';
+
+  function exitImpersonation() {
+    setImpersonate('');
+    localStorage.removeItem('fbd_admin_impersonate_name');
+    window.location.href = '/admin/accounts';
+  }
+
+  const nav = isSuperadmin
+    ? [{ section: 'Platform', items: [{ to: '/accounts', label: 'Accounts', icon: 'users' }] }, ...NAV]
+    : NAV;
 
   return (
     <div className="shell">
@@ -79,7 +93,7 @@ export default function Layout() {
           <span>FunnelBD</span>
         </div>
         <nav>
-          {NAV.map((group) => {
+          {nav.map((group) => {
             const items = group.items.filter((item) => !item.adminOnly || isAdmin);
             if (!items.length) return null;
             return (
@@ -114,6 +128,12 @@ export default function Layout() {
             </button>
           </div>
         </header>
+        {impersonating && (
+          <div className="impersonation-bar">
+            <span><Icon name="users" size={14} /> Managing <b>{impName}</b> as super-admin</span>
+            <button className="btn-ghost sm" onClick={exitImpersonation}>Exit to Accounts</button>
+          </div>
+        )}
         <SystemBanner {...sys} />
         <main className="content">
           <Outlet />

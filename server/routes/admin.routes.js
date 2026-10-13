@@ -73,6 +73,11 @@ import {
   setPrimaryDomain,
   deleteDomain,
 } from '../controllers/domain.controller.js';
+import {
+  listAccounts,
+  getAccount,
+  setAccountStatus,
+} from '../controllers/superadmin.controller.js';
 import { handleUpload } from '../controllers/upload.controller.js';
 import { signup, checkSubdomain } from '../controllers/signup.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
@@ -132,6 +137,11 @@ router.post('/funnels', requireAdmin, requireRole('admin'), createFunnel);
 router.post('/funnels/:id/clone', requireAdmin, requireRole('admin'), cloneFunnel);
 router.put('/funnels/:id', requireAdmin, requireRole('admin'), updateFunnel);
 router.delete('/funnels/:id', requireAdmin, requireRole('admin'), deleteFunnel);
+
+// ── Platform super-admin (across all tenants) ───────
+router.get('/superadmin/accounts', requireAdmin, requireRole('superadmin'), listAccounts);
+router.get('/superadmin/accounts/:id', requireAdmin, requireRole('superadmin'), getAccount);
+router.patch('/superadmin/accounts/:id/status', requireAdmin, requireRole('superadmin'), setAccountStatus);
 
 // ── Custom domains (admin-only) ──────────────────────
 router.get('/domains', requireAdmin, requireRole('admin'), listDomains);

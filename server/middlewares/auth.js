@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { verifyToken } from '../utils/jwt.js';
 import { Admin } from '../models/index.js';
+import { getAccountStatus } from '../services/domain.service.js';
 
 /**
  * Protects admin API routes. Accepts the JWT from either an httpOnly cookie
@@ -39,6 +40,15 @@ export async function requireAdmin(req, res, next) {
 
   req.admin = admin;
   req.isSuperadmin = admin.role === 'superadmin';
+
+  // A suspended tenant's own admins/staff are locked out (superadmin is exempt).
+  if (!req.isSuperadmin && admin.accountId) {
+    let status;
+    try { status = await getAccountStatus(admin.accountId); } catch { status = null; }
+    if (status === 'suspended' || status === 'missing') {
+      return res.status(403).json({ error: 'This account is suspended. Contact support.' });
+    }
+  }
 
   // Which Account this request operates on. A normal admin/staff user is locked
   // to their own account; the platform superadmin picks one per request via

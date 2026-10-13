@@ -2,6 +2,7 @@
 // so auth works identically in dev (Vite proxy) and prod (same origin).
 
 const TOKEN_KEY = 'fbd_admin_token';
+const IMPERSONATE_KEY = 'fbd_admin_impersonate';
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
@@ -9,6 +10,16 @@ export function getToken() {
 export function setToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+// Super-admin "manage as account": the backend honours X-Account-Id only for a
+// superadmin, so it's harmless to send whenever a selection exists.
+export function getImpersonate() {
+  return localStorage.getItem(IMPERSONATE_KEY) || '';
+}
+export function setImpersonate(accountId) {
+  if (accountId) localStorage.setItem(IMPERSONATE_KEY, accountId);
+  else localStorage.removeItem(IMPERSONATE_KEY);
 }
 
 export async function api(path, { method = 'GET', body, params } = {}) {
@@ -23,6 +34,8 @@ export async function api(path, { method = 'GET', body, params } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers.Authorization = 'Bearer ' + token;
+  const imp = getImpersonate();
+  if (imp) headers['X-Account-Id'] = imp;
 
   const res = await fetch(url, {
     method,

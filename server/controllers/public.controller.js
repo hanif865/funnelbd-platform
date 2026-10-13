@@ -98,6 +98,9 @@ function seenRecently(key) {
  */
 export async function renderLanding(req, res, next) {
   try {
+    if (req.publicAccountSuspended) {
+      return res.status(503).send('এই স্টোরটি এখন উপলব্ধ নয়।');
+    }
     const accountId = req.publicAccountId || null;
     const slug = req.params.slug || null;
     // An unknown slug falls back to this account's default funnel rather than 404ing.

@@ -20,7 +20,7 @@ const mongoose = (await import('mongoose')).default;
 await connectDB();
 
 // Tests run in order; the index-migration one manipulates indexes, so last.
-const modules = ['./funnels.test.mjs', './dashboard.test.mjs', './tracking-log.test.mjs', './saas-tenancy.test.mjs', './saas-isolation.test.mjs', './saas-order-isolation.test.mjs', './saas-settings-isolation.test.mjs', './saas-public-routing.test.mjs', './saas-signup.test.mjs', './saas-domains.test.mjs', './dailystat-index.test.mjs'];
+const modules = ['./funnels.test.mjs', './dashboard.test.mjs', './tracking-log.test.mjs', './saas-tenancy.test.mjs', './saas-isolation.test.mjs', './saas-order-isolation.test.mjs', './saas-settings-isolation.test.mjs', './saas-public-routing.test.mjs', './saas-signup.test.mjs', './saas-domains.test.mjs', './saas-superadmin.test.mjs', './dailystat-index.test.mjs'];
 
 const results = [];
 for (const m of modules) {
