@@ -163,6 +163,12 @@ export async function deleteFunnel(req, res, next) {
     const total = await Product.countDocuments();
     if (total <= 1) return res.status(400).json({ error: 'At least one funnel is required.' });
 
+    // The default funnel (first active) backs legacy/null fallbacks — keep it.
+    const defPid = await getDefaultProductId();
+    if (defPid && String(defPid) === String(id)) {
+      return res.status(400).json({ error: 'The default funnel cannot be deleted. Make another funnel the default first.' });
+    }
+
     const orderCount = await Order.countDocuments({ productId: id });
     if (orderCount > 0) {
       return res.status(400).json({ error: `This funnel has ${orderCount} order(s) — deactivate it instead of deleting.` });

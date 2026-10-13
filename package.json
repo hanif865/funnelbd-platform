@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "node --watch server/app.js",
+    "test": "node tests/run.mjs",
     "dev:mem": "node server/scripts/dev-mem.js",
     "db:start": "node server/scripts/db-local.js",
     "start": "node server/web.js",
