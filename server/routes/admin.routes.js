@@ -58,6 +58,13 @@ import {
   getCourierSettings,
   updateCourierSettings,
 } from '../controllers/settings.controller.js';
+import {
+  listFunnels,
+  createFunnel,
+  cloneFunnel,
+  updateFunnel,
+  deleteFunnel,
+} from '../controllers/funnel.controller.js';
 import { handleUpload } from '../controllers/upload.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 import { invalidateCatalogCache } from '../services/catalog.cache.js';
@@ -105,6 +112,13 @@ router.get('/incomplete/offers', requireAdmin, offersForConvert);
 router.patch('/incomplete/:id/status', requireAdmin, updateIncompleteStatus);
 router.post('/incomplete/:id/followup', requireAdmin, sendIncompleteFollowUp);
 router.post('/incomplete/:id/convert', requireAdmin, convertIncomplete);
+
+// ── Funnels (multi-funnel management, admin-only) ────
+router.get('/funnels', requireAdmin, listFunnels);
+router.post('/funnels', requireAdmin, requireRole('admin'), createFunnel);
+router.post('/funnels/:id/clone', requireAdmin, requireRole('admin'), cloneFunnel);
+router.put('/funnels/:id', requireAdmin, requireRole('admin'), updateFunnel);
+router.delete('/funnels/:id', requireAdmin, requireRole('admin'), deleteFunnel);
 
 // ── Product & Offers ─────────────────────────────────
 router.get('/product', requireAdmin, getProduct);

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api } from '../api.js';
+import { useFunnelApi } from '../funnel.jsx';
 import { money } from '../constants.js';
 import { Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
@@ -8,19 +8,20 @@ import ImageUploader from '../components/ImageUploader.jsx';
 const blankOffer = { title: '', price: '', comparePrice: '', quantity: 1, badge: '', image: '', isDefault: false, active: true };
 
 export default function Offers() {
+  const fapi = useFunnelApi();
   const [offers, setOffers] = useState([]);
   const [editing, setEditing] = useState(null);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const d = await api('/offers');
+    const d = await fapi('/offers');
     setOffers(d.offers);
-  }, []);
+  }, [fapi]);
   useEffect(() => { load(); }, [load]);
 
   async function remove(id) {
     if (!confirm('Delete this offer?')) return;
-    try { await api('/offers/' + id, { method: 'DELETE' }); load(); }
+    try { await fapi('/offers/' + id, { method: 'DELETE' }); load(); }
     catch (e) { setMsg(e.message); }
   }
 
@@ -58,6 +59,7 @@ export default function Offers() {
 }
 
 function OfferModal({ offer, onClose, onSaved }) {
+  const fapi = useFunnelApi();
   const isNew = !offer._id;
   const [o, setO] = useState({ ...offer });
   const [busy, setBusy] = useState(false);
@@ -72,8 +74,8 @@ function OfferModal({ offer, onClose, onSaved }) {
       isDefault: !!o.isDefault, active: o.active !== false,
     };
     try {
-      if (isNew) await api('/offers', { method: 'POST', body });
-      else await api('/offers/' + o._id, { method: 'PUT', body });
+      if (isNew) await fapi('/offers', { method: 'POST', body });
+      else await fapi('/offers/' + o._id, { method: 'PUT', body });
       onSaved();
     } catch (e) { setErr(e.message); }
     finally { setBusy(false); }

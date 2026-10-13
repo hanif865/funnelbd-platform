@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useFunnelApi, useFunnel } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -86,10 +87,12 @@ function CrmSyncCard() {
 
 // ─── General ─────────────────────────────────────────────
 function GeneralTab() {
+  const fapi = useFunnelApi();
+  const { current } = useFunnel();
   const [s, setS] = useState(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { api('/settings').then(setS); }, []);
+  useEffect(() => { setS(null); fapi('/settings').then(setS); }, [fapi]);
   function upd(sec, patch) { setS((x) => ({ ...x, [sec]: { ...x[sec], ...patch } })); }
   function updTpl(patch) { setS((x) => ({ ...x, sms: { ...x.sms, templates: { ...x.sms.templates, ...patch } } })); }
 
@@ -98,7 +101,7 @@ function GeneralTab() {
     try {
       const body = { duplicateCooldown: s.duplicateCooldown, storeInfo: s.storeInfo, sms: { ...s.sms } };
       if (String(body.sms.apiKey || '').startsWith('••••')) body.sms.apiKey = '';
-      setS(await api('/settings', { method: 'PUT', body }));
+      setS(await fapi('/settings', { method: 'PUT', body }));
       setMsg('Saved.');
     } catch (e) { setMsg(e.message); } finally { setBusy(false); }
   }
@@ -107,18 +110,18 @@ function GeneralTab() {
     <div>
       <CrmSyncCard />
       <div className="card">
-        <h3>Duplicate-order cooldown</h3>
+        <h3>Duplicate-order cooldown <span className="muted" style={{ fontWeight: 400, fontSize: '.8rem' }}>· shared across funnels</span></h3>
         <label className="cbx"><input type="checkbox" checked={s.duplicateCooldown.enabled} onChange={(e) => upd('duplicateCooldown', { enabled: e.target.checked })} /> Enabled</label>
         <div className="fld" style={{ marginTop: 8 }}><label>Hours</label><input type="number" value={s.duplicateCooldown.hours} onChange={(e) => upd('duplicateCooldown', { hours: Number(e.target.value) || 0 })} /></div>
         <div className="fld"><label>Blocked-customer message</label><textarea rows={2} value={s.duplicateCooldown.message} onChange={(e) => upd('duplicateCooldown', { message: e.target.value })} /></div>
       </div>
       <div className="card">
-        <h3>Store info</h3>
+        <h3>Store info <span className="muted" style={{ fontWeight: 400, fontSize: '.8rem' }}>· for {current?.name || 'this funnel'}</span></h3>
         <StorePhones phones={s.storeInfo.phones || []} onChange={(phones) => upd('storeInfo', { phones })} />
         <div className="fld"><label>Address</label><input value={s.storeInfo.address} onChange={(e) => upd('storeInfo', { address: e.target.value })} /></div>
       </div>
       <div className="card">
-        <h3>SMS gateway</h3>
+        <h3>SMS gateway <span className="muted" style={{ fontWeight: 400, fontSize: '.8rem' }}>· shared across funnels</span></h3>
         <label className="cbx"><input type="checkbox" checked={s.sms.enabled} onChange={(e) => upd('sms', { enabled: e.target.checked })} /> SMS enabled</label>
         <div className="two-col" style={{ marginTop: 8 }}>
           <div className="fld"><label>API URL</label><input value={s.sms.apiUrl} onChange={(e) => upd('sms', { apiUrl: e.target.value })} /></div>

@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
+import { FunnelProvider } from './funnel.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
+import Funnels from './pages/Funnels.jsx';
 import Orders from './pages/Orders.jsx';
 import OrderDetail from './pages/OrderDetail.jsx';
 import Tracking from './pages/Tracking.jsx';
@@ -28,12 +30,15 @@ export default function App() {
       <Route
         element={
           <Protected>
-            <Layout />
+            <FunnelProvider>
+              <Layout />
+            </FunnelProvider>
           </Protected>
         }
       >
         <Route path="/" element={<Navigate to="/orders" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/funnels" element={<Funnels />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/incomplete" element={<Incomplete />} />

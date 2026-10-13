@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, getToken } from '../api.js';
+import { getToken } from '../api.js';
+import { useFunnelApi, useFunnel } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import ImageUploader from '../components/ImageUploader.jsx';
@@ -19,13 +20,16 @@ async function uploadImage(file) {
 }
 
 export default function PageEditor() {
+  const fapi = useFunnelApi();
+  const { current } = useFunnel();
   const [p, setP] = useState(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api('/product').then((d) => setP(normalize(d.product)));
-  }, []);
+    setP(null);
+    fapi('/product').then((d) => setP(normalize(d.product)));
+  }, [fapi]);
 
   function normalize(prod) {
     if (!prod) return null;
@@ -88,7 +92,7 @@ export default function PageEditor() {
     setBusy(true);
     setMsg('');
     try {
-      await api('/product', {
+      await fapi('/product', {
         method: 'PUT',
         body: {
           name: p.name,
@@ -116,7 +120,7 @@ export default function PageEditor() {
             Each section is arranged in the visual order of the live funnel.
           </p>
         </div>
-        <a className="btn-ghost" href="/funnel-step/checkout/" target="_blank" rel="noreferrer">Live page <Icon name="external" size={15} /></a>
+        <a className="btn-ghost" href={current?.slug ? `/funnel-step/${current.slug}/` : '/funnel-step/checkout/'} target="_blank" rel="noreferrer">Live page <Icon name="external" size={15} /></a>
       </div>
 
       {/* ── 1. Brand & top bar ── */}

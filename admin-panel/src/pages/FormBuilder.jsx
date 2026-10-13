@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api } from '../api.js';
+import { useFunnelApi } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -10,14 +10,15 @@ const TYPES = [
 const blank = { label: '', name: '', type: 'text', options: [], placeholder: '', required: false, active: true };
 
 export default function FormBuilder() {
+  const fapi = useFunnelApi();
   const [fields, setFields] = useState([]);
   const [editing, setEditing] = useState(null);
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const d = await api('/fields');
+    const d = await fapi('/fields');
     setFields(d.fields);
-  }, []);
+  }, [fapi]);
   useEffect(() => { load(); }, [load]);
 
   async function move(i, dir) {
@@ -26,19 +27,19 @@ export default function FormBuilder() {
     const next = [...fields];
     [next[i], next[j]] = [next[j], next[i]];
     setFields(next);
-    await api('/fields/reorder', { method: 'PUT', body: { ids: next.map((f) => f._id) } });
+    await fapi('/fields/reorder', { method: 'PUT', body: { ids: next.map((f) => f._id) } });
   }
 
   async function toggleActive(f) {
     if (f.isCore) return;
-    await api('/fields/' + f._id, { method: 'PUT', body: { active: !f.active } });
+    await fapi('/fields/' + f._id, { method: 'PUT', body: { active: !f.active } });
     load();
   }
 
   async function remove(f) {
     if (f.isCore) return;
     if (!confirm(`Delete the "${f.label}" field?`)) return;
-    try { await api('/fields/' + f._id, { method: 'DELETE' }); load(); }
+    try { await fapi('/fields/' + f._id, { method: 'DELETE' }); load(); }
     catch (e) { setMsg(e.message); }
   }
 
@@ -99,6 +100,7 @@ export default function FormBuilder() {
 }
 
 function FieldModal({ field, onClose, onSaved }) {
+  const fapi = useFunnelApi();
   const isNew = !field._id;
   const [f, setF] = useState({ ...field, optionsText: (field.options || []).join('\n') });
   const [err, setErr] = useState('');
@@ -113,8 +115,8 @@ function FieldModal({ field, onClose, onSaved }) {
       placeholder: f.placeholder, required: !!f.required, active: f.active !== false,
     };
     try {
-      if (isNew) await api('/fields', { method: 'POST', body });
-      else await api('/fields/' + f._id, { method: 'PUT', body });
+      if (isNew) await fapi('/fields', { method: 'POST', body });
+      else await fapi('/fields/' + f._id, { method: 'PUT', body });
       onSaved();
     } catch (e) { setErr(e.message); }
     finally { setBusy(false); }

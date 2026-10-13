@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import {
   Product,
   Offer,
@@ -5,23 +6,48 @@ import {
   DeliveryZone,
   FIELD_TYPES,
 } from '../models/index.js';
+import { getDefaultProductId } from '../services/catalog.cache.js';
+
+// Which funnel these catalog edits apply to. ?funnel=<id> targets a funnel;
+// otherwise the default (first active) funnel, so legacy single-funnel admin
+// calls keep working unchanged.
+async function targetFunnel(req) {
+  const q = req.query.funnel;
+  if (q && mongoose.isValidObjectId(q)) return q;
+  return getDefaultProductId();
+}
+
+// Form fields / delivery zones match the targeted funnel. The default funnel
+// also owns legacy null-productId docs (pre-migration), so include those.
+async function scopeFilter(req) {
+  const [pid, defPid] = await Promise.all([targetFunnel(req), getDefaultProductId()]);
+  const isDefault = defPid && String(defPid) === String(pid);
+  const match = isDefault ? { $or: [{ productId: pid }, { productId: null }] } : { productId: pid };
+  return { pid, match, isDefault };
+}
 
 // ─── Product ────────────────────────────────────────────────
-/** GET /api/admin/product → the (single) active product. */
+/** GET /api/admin/product → the targeted funnel's product (default funnel). */
 export async function getProduct(req, res, next) {
   try {
-    const product = await Product.findOne().sort({ createdAt: 1 });
+    const pid = await targetFunnel(req);
+    const product = pid
+      ? await Product.findById(pid)
+      : await Product.findOne().sort({ createdAt: 1 });
     res.json({ product });
   } catch (err) {
     next(err);
   }
 }
 
-/** PUT /api/admin/product → update product content. */
+/** PUT /api/admin/product → update the targeted funnel's product content. */
 export async function updateProduct(req, res, next) {
   try {
     const b = req.body || {};
-    const product = await Product.findOne().sort({ createdAt: 1 });
+    const pid = await targetFunnel(req);
+    const product = pid
+      ? await Product.findById(pid)
+      : await Product.findOne().sort({ createdAt: 1 });
     if (!product) return res.status(404).json({ error: 'Product not found.' });
 
     if (b.name !== undefined) product.name = String(b.name).trim();
@@ -41,7 +67,9 @@ export async function updateProduct(req, res, next) {
 // ─── Offers ─────────────────────────────────────────────────
 export async function listOffers(req, res, next) {
   try {
-    res.json({ offers: await Offer.find().sort({ order: 1 }).lean() });
+    const pid = await targetFunnel(req);
+    const where = pid ? { productId: pid } : {};
+    res.json({ offers: await Offer.find(where).sort({ order: 1 }).lean() });
   } catch (err) {
     next(err);
   }
@@ -50,10 +78,10 @@ export async function listOffers(req, res, next) {
 export async function createOffer(req, res, next) {
   try {
     const b = req.body || {};
-    const product = await Product.findOne().sort({ createdAt: 1 });
-    const last = await Offer.findOne().sort({ order: -1 }).select('order').lean();
+    const pid = await targetFunnel(req);
+    const last = await Offer.findOne({ productId: pid }).sort({ order: -1 }).select('order').lean();
     const offer = await Offer.create({
-      productId: product?._id,
+      productId: pid,
       title: String(b.title || '').trim(),
       sku: String(b.sku || '').trim(),
       price: Number(b.price) || 0,
@@ -65,7 +93,10 @@ export async function createOffer(req, res, next) {
       active: b.active !== false,
       order: (last?.order || 0) + 1,
     });
-    if (offer.isDefault) await Offer.updateMany({ _id: { $ne: offer._id } }, { isDefault: false });
+    // "Default offer" is per funnel — only clear the flag on siblings.
+    if (offer.isDefault) {
+      await Offer.updateMany({ _id: { $ne: offer._id }, productId: offer.productId }, { isDefault: false });
+    }
     res.status(201).json({ ok: true, offer });
   } catch (err) {
     next(err);
@@ -84,7 +115,9 @@ export async function updateOffer(req, res, next) {
     if (b.active !== undefined) offer.active = !!b.active;
     if (b.isDefault !== undefined) offer.isDefault = !!b.isDefault;
     await offer.save();
-    if (offer.isDefault) await Offer.updateMany({ _id: { $ne: offer._id } }, { isDefault: false });
+    if (offer.isDefault) {
+      await Offer.updateMany({ _id: { $ne: offer._id }, productId: offer.productId }, { isDefault: false });
+    }
     res.json({ ok: true, offer });
   } catch (err) {
     next(err);
@@ -93,9 +126,11 @@ export async function updateOffer(req, res, next) {
 
 export async function deleteOffer(req, res, next) {
   try {
-    const count = await Offer.countDocuments();
+    const offer = await Offer.findById(req.params.id);
+    if (!offer) return res.status(404).json({ error: 'Offer not found.' });
+    const count = await Offer.countDocuments({ productId: offer.productId });
     if (count <= 1) return res.status(400).json({ error: 'At least one offer is required.' });
-    await Offer.findByIdAndDelete(req.params.id);
+    await offer.deleteOne();
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -105,7 +140,8 @@ export async function deleteOffer(req, res, next) {
 // ─── Form fields ────────────────────────────────────────────
 export async function listFields(req, res, next) {
   try {
-    res.json({ fields: await FormField.find().sort({ order: 1 }).lean(), types: FIELD_TYPES });
+    const { match } = await scopeFilter(req);
+    res.json({ fields: await FormField.find(match).sort({ order: 1 }).lean(), types: FIELD_TYPES });
   } catch (err) {
     next(err);
   }
@@ -114,16 +150,19 @@ export async function listFields(req, res, next) {
 export async function createField(req, res, next) {
   try {
     const b = req.body || {};
+    const { pid, match } = await scopeFilter(req);
     const name = String(b.name || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (!name) return res.status(400).json({ error: 'Enter a field name (English).' });
     if (['name', 'phone', 'address'].includes(name)) {
       return res.status(400).json({ error: 'This name is reserved for a core field.' });
     }
-    if (await FormField.findOne({ name })) return res.status(400).json({ error: 'A field with this name already exists.' });
+    // Name must be unique within this funnel.
+    if (await FormField.findOne({ ...match, name })) return res.status(400).json({ error: 'A field with this name already exists.' });
     if (!FIELD_TYPES.includes(b.type)) return res.status(400).json({ error: 'Invalid type.' });
 
-    const last = await FormField.findOne().sort({ order: -1 }).select('order').lean();
+    const last = await FormField.findOne({ productId: pid }).sort({ order: -1 }).select('order').lean();
     const field = await FormField.create({
+      productId: pid,
       label: String(b.label || '').trim(),
       name,
       type: b.type,
@@ -189,7 +228,8 @@ export async function reorderFields(req, res, next) {
 // ─── Delivery zones ─────────────────────────────────────────
 export async function listZones(req, res, next) {
   try {
-    res.json({ zones: await DeliveryZone.find().sort({ order: 1 }).lean() });
+    const { match } = await scopeFilter(req);
+    res.json({ zones: await DeliveryZone.find(match).sort({ order: 1 }).lean() });
   } catch (err) {
     next(err);
   }
@@ -198,15 +238,19 @@ export async function listZones(req, res, next) {
 export async function createZone(req, res, next) {
   try {
     const b = req.body || {};
-    const last = await DeliveryZone.findOne().sort({ order: -1 }).select('order').lean();
+    const pid = await targetFunnel(req);
+    const last = await DeliveryZone.findOne({ productId: pid }).sort({ order: -1 }).select('order').lean();
     const zone = await DeliveryZone.create({
+      productId: pid,
       name: String(b.name || '').trim(),
       charge: Number(b.charge) || 0,
       isDefault: !!b.isDefault,
       active: b.active !== false,
       order: (last?.order || 0) + 1,
     });
-    if (zone.isDefault) await DeliveryZone.updateMany({ _id: { $ne: zone._id } }, { isDefault: false });
+    if (zone.isDefault) {
+      await DeliveryZone.updateMany({ _id: { $ne: zone._id }, productId: zone.productId }, { isDefault: false });
+    }
     res.status(201).json({ ok: true, zone });
   } catch (err) {
     next(err);
@@ -223,7 +267,9 @@ export async function updateZone(req, res, next) {
     if (b.active !== undefined) zone.active = !!b.active;
     if (b.isDefault !== undefined) zone.isDefault = !!b.isDefault;
     await zone.save();
-    if (zone.isDefault) await DeliveryZone.updateMany({ _id: { $ne: zone._id } }, { isDefault: false });
+    if (zone.isDefault) {
+      await DeliveryZone.updateMany({ _id: { $ne: zone._id }, productId: zone.productId }, { isDefault: false });
+    }
     res.json({ ok: true, zone });
   } catch (err) {
     next(err);
@@ -232,9 +278,11 @@ export async function updateZone(req, res, next) {
 
 export async function deleteZone(req, res, next) {
   try {
-    const count = await DeliveryZone.countDocuments();
+    const zone = await DeliveryZone.findById(req.params.id);
+    if (!zone) return res.status(404).json({ error: 'Zone not found.' });
+    const count = await DeliveryZone.countDocuments({ productId: zone.productId });
     if (count <= 1) return res.status(400).json({ error: 'At least one zone is required.' });
-    await DeliveryZone.findByIdAndDelete(req.params.id);
+    await zone.deleteOne();
     res.json({ ok: true });
   } catch (err) {
     next(err);

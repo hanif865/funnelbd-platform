@@ -1,34 +1,35 @@
 import { useEffect, useState, useCallback } from 'react';
-import { api } from '../api.js';
+import { useFunnelApi } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 
 export default function Delivery() {
+  const fapi = useFunnelApi();
   const [zones, setZones] = useState([]);
   const [free, setFree] = useState({ enabled: false, threshold: 0, allFree: false });
   const [adding, setAdding] = useState({ name: '', charge: '' });
   const [msg, setMsg] = useState(null);
 
   const load = useCallback(async () => {
-    const [z, s] = await Promise.all([api('/zones'), api('/settings')]);
+    const [z, s] = await Promise.all([fapi('/zones'), fapi('/settings')]);
     setZones(z.zones);
     setFree(s.freeDelivery || { enabled: false, threshold: 0, allFree: false });
-  }, []);
+  }, [fapi]);
   useEffect(() => { load(); }, [load]);
 
   async function addZone() {
     if (!adding.name.trim()) return;
-    await api('/zones', { method: 'POST', body: { name: adding.name, charge: Number(adding.charge) || 0 } });
+    await fapi('/zones', { method: 'POST', body: { name: adding.name, charge: Number(adding.charge) || 0 } });
     setAdding({ name: '', charge: '' });
     load();
   }
-  async function updateZone(id, patch) { await api('/zones/' + id, { method: 'PUT', body: patch }); load(); }
+  async function updateZone(id, patch) { await fapi('/zones/' + id, { method: 'PUT', body: patch }); load(); }
   async function deleteZone(id) {
-    try { await api('/zones/' + id, { method: 'DELETE' }); load(); }
+    try { await fapi('/zones/' + id, { method: 'DELETE' }); load(); }
     catch (e) { setMsg({ ok: false, text: e.message }); }
   }
   async function saveFree() {
-    await api('/settings', { method: 'PUT', body: { freeDelivery: free } });
+    await fapi('/settings', { method: 'PUT', body: { freeDelivery: free } });
     setMsg({ ok: true, text: 'Free delivery settings saved.' });
   }
 

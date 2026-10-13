@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api.js';
+import { useFunnelApi } from '../funnel.jsx';
 import { fmtDate } from '../constants.js';
 import { Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
@@ -22,13 +23,15 @@ export default function Tracking() {
 
 // ─── Settings ───────────────────────────────────────────────
 function Settings() {
+  const fapi = useFunnelApi();
   const [cfg, setCfg] = useState(null);
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api('/tracking').then((d) => setCfg(d.tracking)).catch((e) => setMsg({ type: 'err', text: e.message }));
-  }, []);
+    setCfg(null);
+    fapi('/tracking').then((d) => setCfg(d.tracking)).catch((e) => setMsg({ type: 'err', text: e.message }));
+  }, [fapi]);
 
   function upd(platform, patch) {
     setCfg((c) => ({ ...c, [platform]: { ...c[platform], ...patch } }));
@@ -38,7 +41,7 @@ function Settings() {
     setBusy(true);
     setMsg(null);
     try {
-      const d = await api('/tracking', { method: 'PUT', body: cfg });
+      const d = await fapi('/tracking', { method: 'PUT', body: cfg });
       setCfg(d.tracking);
       setMsg({ type: 'ok', text: 'Saved.' });
     } catch (e) {

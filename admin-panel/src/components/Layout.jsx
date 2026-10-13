@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth.jsx';
+import { useFunnel } from '../funnel.jsx';
 import { useSystemHealth, SystemBanner } from './SystemHealth.jsx';
 import Icon from './Icon.jsx';
 
@@ -17,6 +18,7 @@ const NAV = [
   {
     section: 'Store',
     items: [
+      { to: '/funnels', label: 'Funnels', icon: 'funnel', adminOnly: true },
       { to: '/offers', label: 'Offers', icon: 'tag', adminOnly: true },
       { to: '/form-builder', label: 'Checkout form', icon: 'form', adminOnly: true },
       { to: '/delivery', label: 'Delivery', icon: 'truck', adminOnly: true },
@@ -41,6 +43,24 @@ function initials(name) {
     .map((w) => w[0])
     .join('')
     .toUpperCase();
+}
+
+function FunnelSwitcher() {
+  const { funnels, funnelId, setFunnelId, isAdmin } = useFunnel();
+  if (!isAdmin || funnels.length === 0) return null;
+  return (
+    <label className="funnel-switch" title="Which funnel the Store, Tracking and Settings pages edit">
+      <Icon name="funnel" size={15} />
+      <span className="funnel-switch-label">Editing</span>
+      <select value={funnelId} onChange={(e) => setFunnelId(e.target.value)}>
+        {funnels.map((f) => (
+          <option key={f._id} value={f._id}>
+            {f.name || f.slug}{f.active ? '' : ' (off)'}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 export default function Layout() {
@@ -81,6 +101,7 @@ export default function Layout() {
       <div className="main">
         <header className="topbar">
           <div className="topbar-title">Admin panel</div>
+          <FunnelSwitcher />
           <div className="user">
             <div className="avatar">{initials(admin?.name)}</div>
             <div className="user-meta">
