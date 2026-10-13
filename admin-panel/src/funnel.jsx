@@ -49,9 +49,15 @@ export function FunnelProvider({ children }) {
     [funnels, funnelId]
   );
 
+  // Resolve a funnel name from an order/lead's productId (for list columns).
+  const nameOf = useMemo(() => {
+    const byId = new Map(funnels.map((f) => [String(f._id), f.name || f.slug]));
+    return (id) => (id ? byId.get(String(id)) || '' : '');
+  }, [funnels]);
+
   const value = useMemo(
-    () => ({ funnels, funnelId, current, setFunnelId, reload, loading, isAdmin }),
-    [funnels, funnelId, current, setFunnelId, reload, loading, isAdmin]
+    () => ({ funnels, funnelId, current, setFunnelId, reload, loading, isAdmin, nameOf, multi: funnels.length > 1 }),
+    [funnels, funnelId, current, setFunnelId, reload, loading, isAdmin, nameOf]
   );
   return <FunnelCtx.Provider value={value}>{children}</FunnelCtx.Provider>;
 }
@@ -61,6 +67,7 @@ export function useFunnel() {
     useContext(FunnelCtx) || {
       funnels: [], funnelId: '', current: null,
       setFunnelId: () => {}, reload: () => {}, loading: false, isAdmin: false,
+      nameOf: () => '', multi: false,
     }
   );
 }

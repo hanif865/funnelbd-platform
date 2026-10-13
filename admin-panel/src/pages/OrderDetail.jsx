@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { STATUSES, fmtDate, money, fieldLabel } from '../constants.js';
 import { StatusPill, Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
+import { useFunnel } from '../funnel.jsx';
 
 function waLink(phone) {
   const digits = String(phone || '').replace(/\D/g, '');
@@ -20,6 +21,7 @@ const FRAUD_VERDICT = {
 
 export default function OrderDetail() {
   const { id } = useParams();
+  const { nameOf, multi } = useFunnel();
   const [order, setOrder] = useState(null);
   const [history, setHistory] = useState([]);
   const [error, setError] = useState('');
@@ -92,6 +94,9 @@ export default function OrderDetail() {
         <h1>
           Order #{order.orderNumber}{' '}
           <StatusPill status={order.status} />
+          {multi && nameOf(order.productId) && (
+            <Pill color="#7c3aed" small>{nameOf(order.productId)}</Pill>
+          )}
         </h1>
         <Link to="/orders" className="btn-ghost"><Icon name="back" size={16} /> Back to list</Link>
       </div>

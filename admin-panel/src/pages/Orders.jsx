@@ -5,12 +5,13 @@ import { STATUSES, fmtDate, money, num, fieldLabel } from '../constants.js';
 import { StatusPill, Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import { useAuth } from '../auth.jsx';
-import { FunnelFilter } from '../funnel.jsx';
+import { FunnelFilter, useFunnel } from '../funnel.jsx';
 
 export default function Orders() {
   const navigate = useNavigate();
   const { admin } = useAuth();
   const isAdmin = admin?.role === 'admin';
+  const { nameOf, multi } = useFunnel();
   const [data, setData] = useState({ orders: [], pagination: {}, statusCounts: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -101,7 +102,7 @@ export default function Orders() {
             <thead>
               <tr>
                 <th><input type="checkbox" checked={sel.size === orders.length && orders.length > 0} onChange={toggleAll} /></th>
-                <th>Order</th><th>Name</th><th>Phone</th><th>Offer</th><th className="num">Total</th><th>Status</th><th>Courier</th><th>Source</th><th>Placed</th>
+                <th>Order</th>{multi && <th>Funnel</th>}<th>Name</th><th>Phone</th><th>Offer</th><th className="num">Total</th><th>Status</th><th>Courier</th><th>Source</th><th>Placed</th>
               </tr>
             </thead>
             <tbody>
@@ -109,6 +110,7 @@ export default function Orders() {
                 <tr key={o._id} className={sel.has(o._id) ? 'row-sel' : ''}>
                   <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={sel.has(o._id)} onChange={() => toggle(o._id)} /></td>
                   <td onClick={() => navigate('/orders/' + o._id)}><span className="cell-strong">#{o.orderNumber}</span></td>
+                  {multi && <td>{nameOf(o.productId) ? <Pill color="#7c3aed" small>{nameOf(o.productId)}</Pill> : <span className="muted">—</span>}</td>}
                   <td onClick={() => navigate('/orders/' + o._id)}>{o.customer?.name}</td>
                   <td>{o.customer?.phone}</td>
                   <td onClick={() => navigate('/orders/' + o._id)}>

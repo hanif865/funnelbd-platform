@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { money, num } from '../constants.js';
 import { Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
-import { FunnelFilter } from '../funnel.jsx';
+import { FunnelFilter, useFunnel } from '../funnel.jsx';
 
 const INC_STATUS = { new: 'New', called: 'Called', converted: 'Converted', dead: 'Dead' };
 const INC_COLOR = { new: '#3b82f6', called: '#f59e0b', converted: '#10b981', dead: '#6b7280' };
@@ -22,6 +22,7 @@ function waLink(phone) {
 }
 
 export default function Incomplete() {
+  const { nameOf, multi } = useFunnel();
   const [data, setData] = useState({ items: [], statusCounts: {} });
   const [status, setStatus] = useState('');
   const [funnel, setFunnel] = useState('');
@@ -83,7 +84,7 @@ export default function Incomplete() {
         <div className="table-wrap">
           <table className="table">
             <thead>
-              <tr><th>Name</th><th>Phone</th><th>Offer</th><th>When</th><th>Status</th><th>Actions</th></tr>
+              <tr><th>Name</th>{multi && <th>Funnel</th>}<th>Phone</th><th>Offer</th><th>When</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {items.map((it) => (
@@ -99,6 +100,7 @@ export default function Incomplete() {
                       </div>
                     )}
                   </td>
+                  {multi && <td>{nameOf(it.productId) ? <Pill color="#7c3aed" small>{nameOf(it.productId)}</Pill> : <span className="muted">—</span>}</td>}
                   <td>{it.phoneValid ? it.phone : <span className="muted">Incomplete</span>}</td>
                   <td>
                     <div style={{ fontWeight: 600 }}>{it.offerId?.title || '—'}</div>
