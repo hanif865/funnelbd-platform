@@ -109,10 +109,11 @@ export async function renderLanding(req, res, next) {
     // Per-funnel store info / free-delivery / tracking (falls back to the shared
     // global config until this funnel sets its own).
     const pid = product._id;
+    const aid = product.accountId || null;
     const [storeInfo, freeDelivery, trackingCfg] = await Promise.all([
-      getFunnelSetting('storeInfo', pid, {}),
-      getFunnelSetting('freeDelivery', pid, { enabled: false, threshold: 0, allFree: false }),
-      getTrackingConfig(pid),
+      getFunnelSetting('storeInfo', pid, aid, {}),
+      getFunnelSetting('freeDelivery', pid, aid, { enabled: false, threshold: 0, allFree: false }),
+      getTrackingConfig(pid, aid),
     ]);
     const settings = { storeInfo, freeDelivery };
 
@@ -289,7 +290,7 @@ export async function saveDraft(req, res) {
  */
 export async function trackMoment(req, res) {
   try {
-    const { moment, eventId, fields = {}, custom = {}, sourceUrl, productId } = req.body || {};
+    const { moment, eventId, fields = {}, custom = {}, sourceUrl, productId, accountId } = req.body || {};
     if (!['pageview', 'add_to_cart', 'initiate'].includes(moment) || !eventId) {
       return res.status(204).end();
     }
@@ -321,6 +322,7 @@ export async function trackMoment(req, res) {
       eventId,
       identifiers,
       productId: typeof productId === 'string' ? productId : null,
+      accountId: typeof accountId === 'string' ? accountId : null,
       custom: {
         value: typeof custom.value === 'number' ? custom.value : undefined,
         contentIds: Array.isArray(custom.contentIds) ? custom.contentIds.slice(0, 10) : undefined,

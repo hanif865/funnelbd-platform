@@ -197,9 +197,10 @@ export async function sendCourier(req, res, next) {
 /** GET /api/admin/orders/:id/fraud → phone delivery-success history. */
 export async function fraudCheckOrder(req, res, next) {
   try {
-    const order = await Order.findOne({ _id: req.params.id, accountId: acct(req) }).select('customer.phone').lean();
+    const accountId = acct(req);
+    const order = await Order.findOne({ _id: req.params.id, accountId }).select('customer.phone').lean();
     if (!order) return res.status(404).json({ error: 'Order not found.' });
-    res.json(await fraudCheck(order.customer.phone));
+    res.json(await fraudCheck(order.customer.phone, accountId));
   } catch (err) {
     next(err);
   }

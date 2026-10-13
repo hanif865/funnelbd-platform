@@ -22,8 +22,8 @@ export const COURIER_DEFAULTS = {
   fraudCheck: { externalEnabled: false, apiUrl: '', apiKey: '' },
 };
 
-export async function getCourierConfig() {
-  const stored = (await getSetting(COURIER_SETTING_KEY, {})) || {};
+export async function getCourierConfig(accountId = null) {
+  const stored = (await getSetting(COURIER_SETTING_KEY, accountId, {})) || {};
   return {
     ...COURIER_DEFAULTS,
     ...stored,
@@ -32,7 +32,7 @@ export async function getCourierConfig() {
     fraudCheck: { ...COURIER_DEFAULTS.fraudCheck, ...(stored.fraudCheck || {}) },
   };
 }
-export async function saveCourierConfig(cfg) { return setSetting(COURIER_SETTING_KEY, cfg); }
+export async function saveCourierConfig(cfg, accountId = null) { return setSetting(COURIER_SETTING_KEY, accountId, cfg); }
 
 // ── Steadfast ───────────────────────────────────────────────
 async function steadfastCreate(cfg, order) {
@@ -103,7 +103,7 @@ async function pathaoCreate(cfg, order) {
  * returns a structured result the caller persists / reports.
  */
 export async function sendToCourier(order) {
-  const cfg = await getCourierConfig();
+  const cfg = await getCourierConfig(order.accountId);
   const provider = cfg.provider;
   try {
     if (provider === 'steadfast') {
@@ -124,9 +124,9 @@ export async function sendToCourier(order) {
  * Fraud signal for a phone. Internal: our own delivered vs returned/cancelled
  * history. Optional: an external courier fraud API if configured.
  */
-export async function fraudCheck(phone) {
+export async function fraudCheck(phone, accountId = null) {
   const norm = toLocal(phone);
-  const orders = await Order.find({ 'customer.phone': norm })
+  const orders = await Order.find({ accountId, 'customer.phone': norm })
     .select('status total createdAt orderNumber')
     .lean();
 
@@ -140,7 +140,7 @@ export async function fraudCheck(phone) {
 
   // Optional external fraud API.
   let external = null;
-  const cfg = await getCourierConfig();
+  const cfg = await getCourierConfig(accountId);
   if (cfg.fraudCheck.externalEnabled && cfg.fraudCheck.apiUrl) {
     try {
       const url = cfg.fraudCheck.apiUrl + (cfg.fraudCheck.apiUrl.includes('?') ? '&' : '?') + 'phone=' + encodeURIComponent(norm);

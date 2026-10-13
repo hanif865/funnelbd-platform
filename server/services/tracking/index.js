@@ -35,8 +35,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── Per-platform send dispatch (fetches fresh config so tokens never sit in a
 //    queue payload). Returns the platform service's structured result. ──
-async function callPlatform(platform, eventName, eventInput, productId) {
-  const cfg = await getTrackingConfig(productId);
+async function callPlatform(platform, eventName, eventInput, productId, accountId) {
+  const cfg = await getTrackingConfig(productId, accountId);
 
   if (platform === 'facebook') {
     if (!cfg.facebook.enabled || !cfg.facebook.pixelId || !cfg.facebook.accessToken) {
@@ -66,13 +66,13 @@ async function callPlatform(platform, eventName, eventInput, productId) {
  * @param {object} job { platform, eventName, eventId, orderId, eventInput }
  */
 export async function runTrackingJob(job) {
-  const { platform, eventName, eventId, orderId, eventInput, productId } = job;
+  const { platform, eventName, eventId, orderId, eventInput, productId, accountId } = job;
 
   let result;
   let attempts = 0;
   for (let i = 1; i <= MAX_ATTEMPTS; i++) {
     attempts = i;
-    result = await callPlatform(platform, eventName, eventInput, productId);
+    result = await callPlatform(platform, eventName, eventInput, productId, accountId);
     if (result.ok || result.skipped) break;
     if (i < MAX_ATTEMPTS) await sleep(RETRY_DELAY_MS * i);
   }
@@ -86,6 +86,7 @@ export async function runTrackingJob(job) {
     eventId,
     orderId: orderId || null,
     productId: productId || null,
+    accountId: accountId || null,
     payload: result.payload || eventInput,
     status: result.ok ? 'success' : 'failed',
     response: result.response ?? null,
@@ -211,7 +212,7 @@ export function buildPurchaseJobs(order, sourceUrl) {
   }
 
   // Each job carries its funnel so the worker sends with that funnel's pixels.
-  jobs.forEach((j) => { j.productId = order.productId || null; });
+  jobs.forEach((j) => { j.productId = order.productId || null; j.accountId = order.accountId || null; });
   return jobs;
 }
 
@@ -220,7 +221,7 @@ export function buildPurchaseJobs(order, sourceUrl) {
  * only (GA4 handled by gtag on the browser). Identifiers are whatever the
  * browser + request could supply — usually weaker than at purchase.
  */
-export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}, orderId = null, productId = null }) {
+export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}, orderId = null, productId = null, accountId = null }) {
   const map = EVENT_MAP[moment];
   if (!map) return [];
   // The browser sends the real page URL (custom.sourceUrl); fall back to baseUrl.
@@ -268,7 +269,7 @@ export function buildMomentJobs({ moment, eventId, identifiers = {}, custom = {}
     });
   }
 
-  jobs.forEach((j) => { j.productId = productId || null; });
+  jobs.forEach((j) => { j.productId = productId || null; j.accountId = accountId || null; });
   return jobs;
 }
 

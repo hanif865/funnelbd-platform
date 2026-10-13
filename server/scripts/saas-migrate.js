@@ -60,6 +60,18 @@ export async function migrate({ apply = false, superadminEmail = '', host, log =
     summary.stamped[name] = r.modifiedCount;
   }
 
+  // 2b. Settings moved from a unique `key` to a unique (accountId, key). Drop the
+  // old single-field unique index so other tenants can reuse the same keys.
+  try {
+    const coll = Setting.collection;
+    const idx = await coll.indexes();
+    const oldKey = idx.find((i) => i.unique && i.key && i.key.key === 1 && Object.keys(i.key).length === 1);
+    if (oldKey) { await coll.dropIndex(oldKey.name); summary.droppedSettingIndex = oldKey.name; }
+    await Setting.syncIndexes();
+  } catch (e) {
+    summary.settingIndexError = e.message;
+  }
+
   // 3. Platform superadmin (optional) — lift them out of the account.
   const su = superadminEmail ? await Admin.findOne({ email: superadminEmail.toLowerCase().trim() }) : null;
   if (su) {

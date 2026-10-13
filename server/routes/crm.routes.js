@@ -373,6 +373,6 @@ export async function setCrmSync(started) {
   const value = started
     ? { started: true, startedAt: cur.startedAt || new Date().toISOString() }
     : { started: false, startedAt: cur.startedAt || null };
-  await setSetting('crmSync', value);
+  await setSetting('crmSync', null, value); // CRM sync is platform-level for now
   return value;
 }

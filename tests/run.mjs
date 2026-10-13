@@ -12,17 +12,23 @@ process.env.MONGODB_URI = mongod.getUri('funnelbd_test');
 
 const { connectDB } = await import('../server/config/db.js');
 const { seedDefaults } = await import('../server/scripts/seedData.js');
+const { invalidateSettingsCache } = await import('../server/services/settings.service.js');
+const { invalidateCatalogCache } = await import('../server/services/catalog.cache.js');
 const mongoose = (await import('mongoose')).default;
 
 await connectDB();
 
 // Tests run in order; the index-migration one manipulates indexes, so last.
-const modules = ['./funnels.test.mjs', './dashboard.test.mjs', './tracking-log.test.mjs', './saas-tenancy.test.mjs', './saas-isolation.test.mjs', './saas-order-isolation.test.mjs', './dailystat-index.test.mjs'];
+const modules = ['./funnels.test.mjs', './dashboard.test.mjs', './tracking-log.test.mjs', './saas-tenancy.test.mjs', './saas-isolation.test.mjs', './saas-order-isolation.test.mjs', './saas-settings-isolation.test.mjs', './dailystat-index.test.mjs'];
 
 const results = [];
 for (const m of modules) {
   const test = (await import(m)).default;
   await mongoose.connection.dropDatabase();
+  // Module-level in-memory caches outlive dropDatabase — clear them so one
+  // suite's settings/catalog never leak into the next.
+  invalidateSettingsCache();
+  invalidateCatalogCache();
   if (test.seed) await seedDefaults();
   try {
     results.push(await test.fn());

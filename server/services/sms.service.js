@@ -26,8 +26,8 @@ export const SMS_DEFAULTS = {
   },
 };
 
-export async function getSmsConfig() {
-  const stored = (await getSetting(SMS_SETTING_KEY, {})) || {};
+export async function getSmsConfig(accountId = null) {
+  const stored = (await getSetting(SMS_SETTING_KEY, accountId, {})) || {};
   return {
     ...SMS_DEFAULTS,
     ...stored,
@@ -86,7 +86,7 @@ export async function sendSms(phone, message, cfg) {
 
 /** Order confirmation SMS. */
 export async function sendConfirmationSms(order) {
-  const cfg = await getSmsConfig();
+  const cfg = await getSmsConfig(order.accountId);
   if (!cfg.enabled || !cfg.templates.confirmation) return { ok: false, skipped: true };
   const message = renderTemplate(cfg.templates.confirmation, {
     name: order.customer?.name || '',
@@ -99,7 +99,7 @@ export async function sendConfirmationSms(order) {
 
 /** Follow-up SMS for an abandoned checkout. */
 export async function sendFollowUpSms(incomplete, storePhone) {
-  const cfg = await getSmsConfig();
+  const cfg = await getSmsConfig(incomplete.accountId);
   if (!cfg.enabled || !cfg.templates.followUp) return { ok: false, skipped: true };
   const message = renderTemplate(cfg.templates.followUp, {
     name: incomplete.data?.name || '',

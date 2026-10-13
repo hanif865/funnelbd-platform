@@ -55,8 +55,8 @@ export async function calculatePricing({ offer: offerIn, offerId, quantity, deli
   const qty = Math.max(1, Math.floor(Number(quantity) || 1));
   const subtotal = offer.price * qty;
 
-  // Free-delivery rules are per funnel (fall back to the shared global config).
-  const freeDelivery = await getFunnelSetting('freeDelivery', offer.productId, { enabled: false, threshold: 0, allFree: false });
+  // Free-delivery rules are per funnel within the account.
+  const freeDelivery = await getFunnelSetting('freeDelivery', offer.productId, offer.accountId || null, { enabled: false, threshold: 0, allFree: false });
   const deliveryCharge = computeDeliveryCharge(zone.charge, subtotal, freeDelivery);
   const validDiscount = Math.max(0, Math.min(Number(discount) || 0, 100));
   const total = Math.max(0, subtotal + deliveryCharge - validDiscount);
@@ -129,7 +129,7 @@ export async function validateFields(fields = {}, productId = null) {
  * Returns the offending order if a duplicate exists and the rule is enabled.
  */
 export async function findDuplicate(phone, accountId = null) {
-  const { duplicateCooldown } = await getSettings(['duplicateCooldown']);
+  const { duplicateCooldown } = await getSettings(['duplicateCooldown'], accountId);
   if (!duplicateCooldown?.enabled) return null;
 
   const hours = duplicateCooldown.hours || 24;
@@ -165,7 +165,7 @@ export async function createOrder(payload, meta = {}) {
   // passes skipDuplicateCheck since the admin is deliberately creating it.
   const dup = meta.skipDuplicateCheck ? null : await findDuplicate(customer.phone, accountId);
   if (dup) {
-    const { duplicateCooldown } = await getSettings(['duplicateCooldown']);
+    const { duplicateCooldown } = await getSettings(['duplicateCooldown'], accountId);
     throw new DuplicateOrderError(duplicateCooldown?.message || 'আপনার অর্ডারটি আমরা ইতিমধ্যে পেয়েছি!', dup);
   }
 

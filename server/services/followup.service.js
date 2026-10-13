@@ -1,42 +1,53 @@
 import { IncompleteOrder } from '../models/index.js';
 import { getSmsConfig, sendFollowUpSms } from './sms.service.js';
-import { getSetting } from './settings.service.js';
+import { getFunnelSetting } from './settings.service.js';
 import { reportError } from './systemErrors.js';
 
 /**
- * One sweep: find abandoned checkouts that have a valid phone, are still 'new',
- * haven't had a follow-up yet, and have been idle longer than the configured
- * delay — then send the follow-up SMS and stamp followUpSentAt.
+ * One sweep across all tenants: find abandoned checkouts (valid phone, still
+ * 'new', no follow-up yet) and, per the owning account's SMS config, send a
+ * follow-up SMS once they've been idle past that account's delay.
  *
  * Runs on an interval in the web process. Idempotent + safe to run often.
+ * Gating (enabled / delay / store phone) is resolved per account, since each
+ * tenant has its own SMS gateway and settings.
  */
 export async function runFollowUpSweep() {
-  const cfg = await getSmsConfig();
-  if (!cfg.enabled || !cfg.followUpEnabled) return { sent: 0, skipped: true };
-
-  const delayMs = (cfg.followUpDelayMinutes || 30) * 60 * 1000;
-  const cutoff = new Date(Date.now() - delayMs);
-
   const candidates = await IncompleteOrder.find({
     phoneValid: true,
     status: 'new',
     followUpSentAt: null,
-    lastActivityAt: { $lte: cutoff },
-  }).limit(50);
+  }).sort({ lastActivityAt: 1 }).limit(100);
 
   if (candidates.length === 0) return { sent: 0 };
 
-  const storeInfo = (await getSetting('storeInfo', {})) || {};
+  const cfgCache = new Map(); // accountId → SMS config (settings are cached anyway)
+  const cfgFor = async (accountId) => {
+    const key = accountId ? String(accountId) : 'null';
+    if (!cfgCache.has(key)) cfgCache.set(key, await getSmsConfig(accountId));
+    return cfgCache.get(key);
+  };
+
+  const now = Date.now();
   let sent = 0;
+  let swept = 0;
   for (const inc of candidates) {
-    const result = await sendFollowUpSms(inc, storeInfo.phone);
+    const cfg = await cfgFor(inc.accountId);
+    if (!cfg.enabled || !cfg.followUpEnabled) continue;
+    const delayMs = (cfg.followUpDelayMinutes || 30) * 60 * 1000;
+    if (new Date(inc.lastActivityAt).getTime() > now - delayMs) continue; // not idle long enough yet
+
+    const storeInfo = (await getFunnelSetting('storeInfo', inc.productId, inc.accountId || null, {})) || {};
+    const storePhone = storeInfo.phone || (storeInfo.phones && storeInfo.phones[0] && storeInfo.phones[0].number) || '';
+    const result = await sendFollowUpSms(inc, storePhone);
     // Stamp regardless of success so we don't spam on repeated gateway errors.
     inc.followUpSentAt = new Date();
     await inc.save();
+    swept++;
     if (result.ok) sent++;
   }
-  console.log(`[followup] swept ${candidates.length}, sent ${sent}`);
-  return { sent, swept: candidates.length };
+  if (swept) console.log(`[followup] swept ${swept}, sent ${sent}`);
+  return { sent, swept };
 }
 
 let timer = null;

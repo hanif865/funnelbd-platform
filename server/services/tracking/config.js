@@ -24,8 +24,8 @@ export const TRACKING_DEFAULTS = {
  * Per-funnel tracking config (pixels/tokens), merged over defaults. Falls back
  * to the shared global config when a funnel hasn't set its own.
  */
-export async function getTrackingConfig(productId = null) {
-  const stored = (await getFunnelSetting(SETTING_KEY, productId, {})) || {};
+export async function getTrackingConfig(productId = null, accountId = null) {
+  const stored = (await getFunnelSetting(SETTING_KEY, productId, accountId, {})) || {};
   return {
     facebook: { ...TRACKING_DEFAULTS.facebook, ...(stored.facebook || {}) },
     google: { ...TRACKING_DEFAULTS.google, ...(stored.google || {}) },
@@ -33,8 +33,8 @@ export async function getTrackingConfig(productId = null) {
   };
 }
 
-export async function saveTrackingConfig(next, productId = null) {
-  return setFunnelSetting(SETTING_KEY, productId, next);
+export async function saveTrackingConfig(next, productId = null, accountId = null) {
+  return setFunnelSetting(SETTING_KEY, productId, accountId, next);
 }
 
 /**

@@ -9,7 +9,7 @@ function acct(req) {
 }
 import { createOrder } from '../services/order.service.js';
 import { sendFollowUpSms } from '../services/sms.service.js';
-import { getSetting } from '../services/settings.service.js';
+import { getFunnelSetting } from '../services/settings.service.js';
 import { buildPurchaseJobs } from '../services/tracking/index.js';
 import { enqueueTrackingJobs } from '../queues/tracking.queue.js';
 import { reportError } from '../services/systemErrors.js';
@@ -84,8 +84,8 @@ export async function sendIncompleteFollowUp(req, res, next) {
     if (!item) return res.status(404).json({ error: 'Not found.' });
     if (!item.phoneValid) return res.status(400).json({ error: 'No valid phone number.' });
 
-    const storeInfo = (await getSetting('storeInfo', {})) || {};
-    const result = await sendFollowUpSms(item, storeInfo.phone);
+    const storeInfo = (await getFunnelSetting('storeInfo', item.productId, item.accountId || null, {})) || {};
+    const result = await sendFollowUpSms(item, storeInfo.phone || (storeInfo.phones && storeInfo.phones[0] && storeInfo.phones[0].number));
     if (result.skipped) return res.status(400).json({ error: 'SMS is not enabled (check Settings).' });
 
     item.followUpSentAt = new Date();

@@ -7,17 +7,23 @@ import {
 } from '../services/tracking/config.js';
 import { getDefaultProductId } from '../services/catalog.cache.js';
 
-// Which funnel's tracking to edit. Until the admin gets a funnel selector
-// (multi-funnel Phase 4), this is the default funnel; a ?funnel=<id> can target
-// another one.
+// The tenant this request belongs to (set by auth middleware).
+function acct(req) {
+  const id = req.accountId;
+  return id && mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null;
+}
+
+// Which funnel's tracking to edit — the account's default funnel, or ?funnel=.
 async function targetFunnel(req) {
-  return req.query.funnel || (await getDefaultProductId());
+  const q = req.query.funnel;
+  if (q && mongoose.isValidObjectId(q)) return q;
+  return getDefaultProductId(acct(req));
 }
 
 /** GET /api/admin/tracking → config with tokens masked. */
 export async function getTracking(req, res, next) {
   try {
-    const cfg = await getTrackingConfig(await targetFunnel(req));
+    const cfg = await getTrackingConfig(await targetFunnel(req), acct(req));
     res.json({ tracking: toAdminConfig(cfg) });
   } catch (err) {
     next(err);
@@ -41,8 +47,9 @@ function resolveSecret(incoming, stored) {
  */
 export async function updateTracking(req, res, next) {
   try {
+    const accountId = acct(req);
     const pid = await targetFunnel(req);
-    const cur = await getTrackingConfig(pid);
+    const cur = await getTrackingConfig(pid, accountId);
     const b = req.body || {};
 
     const next = {
@@ -67,7 +74,7 @@ export async function updateTracking(req, res, next) {
       },
     };
 
-    await saveTrackingConfig(next, pid);
+    await saveTrackingConfig(next, pid, accountId);
     res.json({ ok: true, tracking: toAdminConfig(next) });
   } catch (err) {
     next(err);
@@ -83,9 +90,10 @@ export async function listEventLogs(req, res, next) {
     const { platform, status, funnel } = req.query;
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '100', 10)));
 
+    const accountId = acct(req);
     const funnelMatch = funnel && mongoose.isValidObjectId(funnel)
-      ? { productId: new mongoose.Types.ObjectId(funnel) }
-      : {};
+      ? { accountId, productId: new mongoose.Types.ObjectId(funnel) }
+      : { accountId };
     const filter = { ...funnelMatch };
     if (platform && EVENT_PLATFORMS.includes(platform)) filter.platform = platform;
     if (status && EVENT_STATUSES.includes(status)) filter.status = status;

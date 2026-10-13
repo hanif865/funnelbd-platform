@@ -209,7 +209,7 @@
         keepalive: true,
         // sourceUrl = the real page URL (e.g. main domain) for event_source_url.
         // productId = which funnel fired this, so the server sends with its pixels.
-        body: JSON.stringify(Object.assign({ moment: moment, eventId: eventId, sourceUrl: location.origin + location.pathname, productId: F.productId }, extra || {})),
+        body: JSON.stringify(Object.assign({ moment: moment, eventId: eventId, sourceUrl: location.origin + location.pathname, productId: F.productId, accountId: F.accountId }, extra || {})),
       }).catch(function () {});
     } catch (e) {}
   }

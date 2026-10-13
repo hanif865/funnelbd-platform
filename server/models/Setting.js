@@ -7,15 +7,16 @@ import mongoose from 'mongoose';
  */
 const settingSchema = new mongoose.Schema(
   {
-    // accountId scopes settings per tenant. Until the SaaS switch-on migration,
-    // existing rows keep accountId null and `key` stays globally unique; the
-    // migration stamps accountId and moves uniqueness to {accountId, key}.
-    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
-    key: { type: String, required: true, unique: true },
+    // accountId scopes settings per tenant; (accountId, key) is unique. Legacy
+    // rows have accountId null until saas-migrate stamps them.
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null },
+    key: { type: String, required: true },
     value: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { timestamps: true, collection: 'settings' }
 );
+
+settingSchema.index({ accountId: 1, key: 1 }, { unique: true });
 
 export const Setting = mongoose.model('Setting', settingSchema);
 export default Setting;

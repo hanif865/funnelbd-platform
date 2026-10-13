@@ -1,13 +1,22 @@
+import mongoose from 'mongoose';
 import { getSettings, setSetting, getFunnelSetting, setFunnelSetting } from '../services/settings.service.js';
 import { getSmsConfig, SMS_DEFAULTS } from '../services/sms.service.js';
 import { getCourierConfig, saveCourierConfig, COURIER_DEFAULTS } from '../services/courier.service.js';
 import { normalizeStoreInfo } from '../services/storeInfo.js';
 import { getDefaultProductId } from '../services/catalog.cache.js';
 
-// storeInfo + freeDelivery are per funnel; until the funnel selector lands
-// (Phase 4) the admin edits the default funnel (or ?funnel=<id>).
+// The tenant this request belongs to (set by auth middleware).
+function acct(req) {
+  const id = req.accountId;
+  return id && mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null;
+}
+
+// storeInfo + freeDelivery are per funnel within the account.
 async function targetFunnel(req) {
-  return req.query.funnel || (await getDefaultProductId());
+  const accountId = acct(req);
+  const q = req.query.funnel;
+  if (q && mongoose.isValidObjectId(q)) return q;
+  return getDefaultProductId(accountId);
 }
 
 const COOLDOWN_DEFAULT = {
@@ -25,12 +34,13 @@ function maskKey(k) {
 /** GET /api/admin/settings → general settings (SMS api key masked). */
 export async function getGeneralSettings(req, res, next) {
   try {
+    const accountId = acct(req);
     const pid = await targetFunnel(req);
-    const s = await getSettings(['duplicateCooldown']);
+    const s = await getSettings(['duplicateCooldown'], accountId);
     const [freeDelivery, storeInfo, sms] = await Promise.all([
-      getFunnelSetting('freeDelivery', pid, null),
-      getFunnelSetting('storeInfo', pid, null),
-      getSmsConfig(),
+      getFunnelSetting('freeDelivery', pid, accountId, null),
+      getFunnelSetting('storeInfo', pid, accountId, null),
+      getSmsConfig(accountId),
     ]);
     res.json({
       duplicateCooldown: s.duplicateCooldown || COOLDOWN_DEFAULT,
@@ -50,30 +60,31 @@ export async function getGeneralSettings(req, res, next) {
 export async function updateGeneralSettings(req, res, next) {
   try {
     const b = req.body || {};
+    const accountId = acct(req);
     const pid = await targetFunnel(req);
 
     if (b.duplicateCooldown) {
-      await setSetting('duplicateCooldown', {
+      await setSetting('duplicateCooldown', accountId, {
         enabled: !!b.duplicateCooldown.enabled,
         hours: Number(b.duplicateCooldown.hours) || 24,
         message: String(b.duplicateCooldown.message || '').trim(),
       });
     }
     if (b.freeDelivery) {
-      await setFunnelSetting('freeDelivery', pid, {
+      await setFunnelSetting('freeDelivery', pid, accountId, {
         enabled: !!b.freeDelivery.enabled,
         threshold: Number(b.freeDelivery.threshold) || 0,
         allFree: !!b.freeDelivery.allFree,
       });
     }
     if (b.storeInfo) {
-      await setFunnelSetting('storeInfo', pid, normalizeStoreInfo(b.storeInfo));
+      await setFunnelSetting('storeInfo', pid, accountId, normalizeStoreInfo(b.storeInfo));
     }
     if (b.sms) {
-      const cur = await getSmsConfig();
+      const cur = await getSmsConfig(accountId);
       const incomingKey = b.sms.apiKey;
       const apiKey = !incomingKey || String(incomingKey).startsWith('••••') ? cur.apiKey : String(incomingKey);
-      await setSetting('sms', {
+      await setSetting('sms', accountId, {
         ...SMS_DEFAULTS,
         ...cur,
         ...b.sms,
@@ -100,7 +111,7 @@ function keepSecret(incoming, stored) {
 /** GET /api/admin/courier → provider config with secrets masked. */
 export async function getCourierSettings(req, res, next) {
   try {
-    const c = await getCourierConfig();
+    const c = await getCourierConfig(acct(req));
     res.json({
       courier: {
         provider: c.provider,
@@ -117,7 +128,8 @@ export async function getCourierSettings(req, res, next) {
 /** PUT /api/admin/courier → merge, preserving unentered secrets. Admin-only. */
 export async function updateCourierSettings(req, res, next) {
   try {
-    const cur = await getCourierConfig();
+    const accountId = acct(req);
+    const cur = await getCourierConfig(accountId);
     const b = req.body || {};
     const next_ = {
       provider: b.provider ?? cur.provider,
@@ -142,7 +154,7 @@ export async function updateCourierSettings(req, res, next) {
         apiKey: keepSecret(b.fraudCheck?.apiKey, cur.fraudCheck.apiKey),
       },
     };
-    await saveCourierConfig(next_);
+    await saveCourierConfig(next_, accountId);
     return getCourierSettings(req, res, next);
   } catch (err) {
     next(err);
