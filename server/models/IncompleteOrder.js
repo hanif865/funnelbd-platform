@@ -10,6 +10,7 @@ export const INCOMPLETE_STATUSES = ['new', 'called', 'converted', 'dead'];
 const incompleteOrderSchema = new mongoose.Schema(
   {
     sessionId: { type: String, required: true, unique: true },
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null, index: true }, // funnel
     data: { type: mongoose.Schema.Types.Mixed, default: {} }, // partial form data
     phone: { type: String, default: '' }, // normalized when valid

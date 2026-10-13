@@ -13,6 +13,7 @@ import { dhakaYmd } from '../utils/time.js';
 const dailyStatSchema = new mongoose.Schema(
   {
     date: { type: String, required: true },
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
     visits: { type: Number, default: 0 },
     visitors: { type: Number, default: 0 },

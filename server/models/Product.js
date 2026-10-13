@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const productSchema = new mongoose.Schema(
   {
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     name: { type: String, required: true, trim: true }, // hero headline
     slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
     description: { type: String, default: '' }, // benefit rich text (HTML)

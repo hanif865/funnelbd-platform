@@ -7,6 +7,10 @@ import mongoose from 'mongoose';
  */
 const settingSchema = new mongoose.Schema(
   {
+    // accountId scopes settings per tenant. Until the SaaS switch-on migration,
+    // existing rows keep accountId null and `key` stays globally unique; the
+    // migration stamps accountId and moves uniqueness to {accountId, key}.
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     key: { type: String, required: true, unique: true },
     value: { type: mongoose.Schema.Types.Mixed, default: null },
   },

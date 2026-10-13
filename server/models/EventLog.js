@@ -13,6 +13,7 @@ const eventLogSchema = new mongoose.Schema(
     eventName: { type: String, required: true }, // Purchase, InitiateCheckout...
     eventId: { type: String, default: '' },
     orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }, // which funnel fired it
     payload: { type: mongoose.Schema.Types.Mixed, default: {} },
     status: { type: String, enum: EVENT_STATUSES, default: 'pending' },

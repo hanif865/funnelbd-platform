@@ -10,3 +10,5 @@ export { Admin, ADMIN_ROLES } from './Admin.js';
 export { Counter } from './Counter.js';
 export { DailyStat } from './DailyStat.js';
 export { SystemError } from './SystemError.js';
+export { Account, ACCOUNT_STATUSES } from './Account.js';
+export { Domain, DOMAIN_TYPES } from './Domain.js';

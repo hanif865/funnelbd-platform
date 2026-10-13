@@ -34,6 +34,7 @@ const orderSchema = new mongoose.Schema(
 
     // The funnel (product) this order came from. Stamped from the offer at
     // creation; backfilled for old orders by the default-funnel migration.
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null, index: true },
 
     customer: {

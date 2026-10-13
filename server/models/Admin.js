@@ -1,13 +1,17 @@
 import mongoose from 'mongoose';
 
-export const ADMIN_ROLES = ['admin', 'staff'];
+// superadmin = platform owner (no account); admin/staff belong to one Account.
+export const ADMIN_ROLES = ['superadmin', 'admin', 'staff'];
 
 /**
- * Panel user. role=admin can do everything; role=staff can manage orders only
- * (settings are off-limits — enforced in route middleware).
+ * Panel user. role=admin can do everything within their Account; role=staff can
+ * manage orders only (settings off-limits — enforced in route middleware);
+ * role=superadmin is the platform owner and belongs to no Account (accountId
+ * null). Every non-superadmin user is scoped to a single Account via accountId.
  */
 const adminSchema = new mongoose.Schema(
   {
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },

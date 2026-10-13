@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
  */
 const offerSchema = new mongoose.Schema(
   {
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     title: { type: String, required: true, trim: true },
     sku: { type: String, default: '', trim: true }, // product code sent to the CRM (falls back to _id)
