@@ -128,13 +128,14 @@ export async function validateFields(fields = {}, productId = null) {
  * Duplicate guard: same phone within the cooldown window (default 24h).
  * Returns the offending order if a duplicate exists and the rule is enabled.
  */
-export async function findDuplicate(phone) {
+export async function findDuplicate(phone, accountId = null) {
   const { duplicateCooldown } = await getSettings(['duplicateCooldown']);
   if (!duplicateCooldown?.enabled) return null;
 
   const hours = duplicateCooldown.hours || 24;
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
   return Order.findOne({
+    accountId,
     'customer.phone': phone,
     createdAt: { $gte: since },
     status: { $nin: ['cancelled'] },
@@ -156,12 +157,13 @@ export async function createOrder(payload, meta = {}) {
   const offer = await findActiveOffer(payload.offerId);
   if (!offer) throw new OrderValidationError('নির্বাচিত অফারটি এখন আর নেই।', { offerId: 'invalid' });
   const productId = offer.productId || null;
+  const accountId = offer.accountId || null; // the tenant that owns this funnel
 
   const { customer, customFields, customFieldLabels, variantSummary } = await validateFields(payload.fields, productId);
 
   // Duplicate check before we spend an order number. Admin "convert to order"
   // passes skipDuplicateCheck since the admin is deliberately creating it.
-  const dup = meta.skipDuplicateCheck ? null : await findDuplicate(customer.phone);
+  const dup = meta.skipDuplicateCheck ? null : await findDuplicate(customer.phone, accountId);
   if (dup) {
     const { duplicateCooldown } = await getSettings(['duplicateCooldown']);
     throw new DuplicateOrderError(duplicateCooldown?.message || 'আপনার অর্ডারটি আমরা ইতিমধ্যে পেয়েছি!', dup);
@@ -179,6 +181,7 @@ export async function createOrder(payload, meta = {}) {
 
   const order = await Order.create({
     orderNumber,
+    accountId,
     productId,
     customer,
     customFields,
@@ -227,7 +230,7 @@ export async function createOrder(payload, meta = {}) {
   // Incomplete list and Orders at once. Fire-and-forget; never blocks the order.
   if (customer.phone) {
     IncompleteOrder.updateMany(
-      { phone: customer.phone, status: { $in: ['new', 'called'] } },
+      { accountId, phone: customer.phone, status: { $in: ['new', 'called'] } },
       { $set: { status: 'converted' } }
     ).catch(() => {});
   }

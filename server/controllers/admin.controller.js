@@ -7,6 +7,14 @@ import { config } from '../config/index.js';
 import { normalizePhone } from '../utils/phone.js';
 import { sendToCourier, fraudCheck } from '../services/courier.service.js';
 
+// The tenant this request belongs to (set by auth middleware), as an ObjectId
+// (aggregate $match does not auto-cast). Every order query is scoped to it so
+// accounts never read or mutate each other's orders.
+function acct(req) {
+  const id = req.accountId;
+  return id && mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null;
+}
+
 /** POST /api/admin/login → sets httpOnly cookie + returns token & admin. */
 export async function login(req, res, next) {
   try {
@@ -58,7 +66,8 @@ export async function listOrders(req, res, next) {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '20', 10)));
 
     const { funnel } = req.query;
-    const filter = {};
+    const accountId = acct(req);
+    const filter = { accountId };
     if (funnel && mongoose.isValidObjectId(funnel)) filter.productId = new mongoose.Types.ObjectId(funnel);
     if (status && ORDER_STATUSES.includes(status)) filter.status = status;
     if (source) filter.source = source;
@@ -78,8 +87,8 @@ export async function listOrders(req, res, next) {
       filter.$or = or;
     }
 
-    // Status chips count within the selected funnel (if any).
-    const countMatch = filter.productId ? { productId: filter.productId } : {};
+    // Status chips count within this account (and the selected funnel, if any).
+    const countMatch = filter.productId ? { accountId, productId: filter.productId } : { accountId };
 
     const [orders, total, statusCounts] = await Promise.all([
       Order.find(filter)
@@ -106,10 +115,12 @@ export async function listOrders(req, res, next) {
 /** GET /api/admin/orders/:id → full detail + same-phone history. */
 export async function getOrder(req, res, next) {
   try {
-    const order = await Order.findById(req.params.id).lean();
+    const accountId = acct(req);
+    const order = await Order.findOne({ _id: req.params.id, accountId }).lean();
     if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     const history = await Order.find({
+      accountId,
       'customer.phone': order.customer.phone,
       _id: { $ne: order._id },
     })
@@ -130,7 +141,7 @@ export async function updateStatus(req, res, next) {
     if (!ORDER_STATUSES.includes(status)) {
       return res.status(400).json({ error: 'Invalid status.' });
     }
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findOne({ _id: req.params.id, accountId: acct(req) });
     if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     order.status = status;
@@ -148,7 +159,7 @@ export async function addNote(req, res, next) {
     const text = String(req.body?.text || '').trim();
     if (!text) return res.status(400).json({ error: 'A note cannot be empty.' });
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findOne({ _id: req.params.id, accountId: acct(req) });
     if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     order.notes.push({ text, by: req.admin.name, at: new Date() });
@@ -162,7 +173,7 @@ export async function addNote(req, res, next) {
 /** POST /api/admin/orders/:id/courier → create consignment, save tracking. */
 export async function sendCourier(req, res, next) {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findOne({ _id: req.params.id, accountId: acct(req) });
     if (!order) return res.status(404).json({ error: 'Order not found.' });
     if (order.courier?.consignmentId) {
       return res.status(400).json({ error: 'This order has already been sent to the courier.' });
@@ -186,7 +197,7 @@ export async function sendCourier(req, res, next) {
 /** GET /api/admin/orders/:id/fraud → phone delivery-success history. */
 export async function fraudCheckOrder(req, res, next) {
   try {
-    const order = await Order.findById(req.params.id).select('customer.phone').lean();
+    const order = await Order.findOne({ _id: req.params.id, accountId: acct(req) }).select('customer.phone').lean();
     if (!order) return res.status(404).json({ error: 'Order not found.' });
     res.json(await fraudCheck(order.customer.phone));
   } catch (err) {
@@ -201,11 +212,11 @@ export async function bulkStatus(req, res, next) {
     if (!ORDER_STATUSES.includes(status) || !Array.isArray(ids) || !ids.length) {
       return res.status(400).json({ error: 'Invalid request.' });
     }
-    await Order.updateMany(
-      { _id: { $in: ids } },
+    const r = await Order.updateMany(
+      { _id: { $in: ids }, accountId: acct(req) },
       { $set: { status }, $push: { statusHistory: { status, by: req.admin.name, at: new Date() } } }
     );
-    res.json({ ok: true, updated: ids.length });
+    res.json({ ok: true, updated: r.modifiedCount });
   } catch (err) {
     next(err);
   }
@@ -215,7 +226,7 @@ export async function bulkStatus(req, res, next) {
 export async function bulkCourier(req, res, next) {
   try {
     const { ids = [] } = req.body || {};
-    const orders = await Order.find({ _id: { $in: ids }, 'courier.consignmentId': { $in: ['', null] } });
+    const orders = await Order.find({ _id: { $in: ids }, accountId: acct(req), 'courier.consignmentId': { $in: ['', null] } });
     let sent = 0;
     const failures = [];
     for (const order of orders) {
@@ -242,7 +253,7 @@ export async function bulkCourier(req, res, next) {
 export async function exportOrders(req, res, next) {
   try {
     const { status, source, search, dateFrom, dateTo, funnel } = req.query;
-    const filter = {};
+    const filter = { accountId: acct(req) };
     if (funnel && mongoose.isValidObjectId(funnel)) filter.productId = new mongoose.Types.ObjectId(funnel);
     if (status && ORDER_STATUSES.includes(status)) filter.status = status;
     if (source) filter.source = source;

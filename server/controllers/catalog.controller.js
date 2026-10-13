@@ -8,9 +8,10 @@ import {
 } from '../models/index.js';
 import { getDefaultProductId } from '../services/catalog.cache.js';
 
-// The tenant this request belongs to (set by auth middleware).
+// The tenant this request belongs to (set by auth middleware), as an ObjectId.
 function acct(req) {
-  return req.accountId || null;
+  const id = req.accountId;
+  return id && mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null;
 }
 
 // Which funnel these catalog edits apply to. ?funnel=<id> targets a funnel that

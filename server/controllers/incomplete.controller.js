@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
 import { IncompleteOrder, INCOMPLETE_STATUSES, Offer } from '../models/index.js';
+
+// Tenant scope (set by auth middleware), as an ObjectId so it matches in
+// find() and aggregate() alike (aggregate $match does not auto-cast).
+function acct(req) {
+  const id = req.accountId;
+  return id && mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null;
+}
 import { createOrder } from '../services/order.service.js';
 import { sendFollowUpSms } from '../services/sms.service.js';
 import { getSetting } from '../services/settings.service.js';
@@ -15,10 +22,11 @@ import { reportError } from '../services/systemErrors.js';
 export async function listIncomplete(req, res, next) {
   try {
     const { status, search, funnel } = req.query;
-    const filter = {};
+    const accountId = acct(req);
+    const filter = { accountId };
     const funnelMatch = funnel && mongoose.isValidObjectId(funnel)
-      ? { productId: new mongoose.Types.ObjectId(funnel) }
-      : {};
+      ? { accountId, productId: new mongoose.Types.ObjectId(funnel) }
+      : { accountId };
     Object.assign(filter, funnelMatch);
     if (status && INCOMPLETE_STATUSES.includes(status)) filter.status = status;
     else filter.status = { $in: ['new', 'called'] }; // default: still recoverable
@@ -57,8 +65,8 @@ export async function updateIncompleteStatus(req, res, next) {
     if (!INCOMPLETE_STATUSES.includes(status)) {
       return res.status(400).json({ error: 'Invalid status.' });
     }
-    const item = await IncompleteOrder.findByIdAndUpdate(
-      req.params.id,
+    const item = await IncompleteOrder.findOneAndUpdate(
+      { _id: req.params.id, accountId: acct(req) },
       { status },
       { new: true }
     );
@@ -72,7 +80,7 @@ export async function updateIncompleteStatus(req, res, next) {
 /** POST /api/admin/incomplete/:id/followup → send follow-up SMS manually. */
 export async function sendIncompleteFollowUp(req, res, next) {
   try {
-    const item = await IncompleteOrder.findById(req.params.id);
+    const item = await IncompleteOrder.findOne({ _id: req.params.id, accountId: acct(req) });
     if (!item) return res.status(404).json({ error: 'Not found.' });
     if (!item.phoneValid) return res.status(400).json({ error: 'No valid phone number.' });
 
@@ -96,7 +104,7 @@ export async function sendIncompleteFollowUp(req, res, next) {
  */
 export async function convertIncomplete(req, res, next) {
   try {
-    const item = await IncompleteOrder.findById(req.params.id);
+    const item = await IncompleteOrder.findOne({ _id: req.params.id, accountId: acct(req) });
     if (!item) return res.status(404).json({ error: 'Not found.' });
 
     const { offerId, quantity = 1, deliveryZoneId, fields = {} } = req.body || {};
@@ -140,7 +148,7 @@ export async function convertIncomplete(req, res, next) {
 export async function offersForConvert(req, res, next) {
   try {
     const { funnel } = req.query;
-    const where = { active: true };
+    const where = { active: true, accountId: acct(req) };
     if (funnel && mongoose.isValidObjectId(funnel)) where.productId = new mongoose.Types.ObjectId(funnel);
     const offers = await Offer.find(where).sort({ order: 1 }).select('title price').lean();
     res.json({ offers });

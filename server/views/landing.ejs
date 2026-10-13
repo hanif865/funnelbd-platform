@@ -661,6 +661,7 @@
       defaultOfferId: <%- JSON.stringify(defaultOfferId) %>,
       defaultZoneId: <%- JSON.stringify(defaultZoneId) %>,
       productId: <%- JSON.stringify(productId) %>,
+      accountId: <%- JSON.stringify(typeof accountId !== 'undefined' ? accountId : null) %>,
       productImages: <%- JSON.stringify(product.images || []) %>
     };
     window.__TRACKING__ = <%- JSON.stringify(tracking) %>;

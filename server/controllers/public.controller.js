@@ -117,7 +117,7 @@ export async function renderLanding(req, res, next) {
     const settings = { storeInfo, freeDelivery };
 
     // Traffic counter for the dashboard conversion rate (fire-and-forget).
-    DailyStat.track(req.isNewSession, pid).catch((e) => reportError('traffic-stat', e));
+    DailyStat.track(req.isNewSession, pid, product.accountId).catch((e) => reportError('traffic-stat', e));
 
     const defaultOffer = offers.find((o) => o.isDefault) || offers[0] || null;
     const defaultZone = zones.find((z) => z.isDefault) || zones[0] || null;
@@ -137,6 +137,7 @@ export async function renderLanding(req, res, next) {
       defaultOfferId: defaultOffer ? String(defaultOffer._id) : '',
       defaultZoneId: defaultZone ? String(defaultZone._id) : '',
       productId: String(product._id),
+      accountId: product.accountId ? String(product.accountId) : null,
       baseUrl: req.app.locals.baseUrl,
     });
   } catch (err) {
@@ -256,10 +257,12 @@ export async function saveDraft(req, res) {
       set.phone = phone;
       set.phoneValid = true;
     }
-    // Stamp the funnel (from the chosen offer) so the incomplete order is scoped.
+    // Stamp the funnel + account (from the chosen offer) so the incomplete
+    // order is scoped to the right tenant and funnel.
     if (offerId) {
       const off = await findActiveOffer(offerId);
       if (off?.productId) set.productId = off.productId;
+      if (off?.accountId) set.accountId = off.accountId;
     }
 
     await IncompleteOrder.updateOne(
@@ -367,6 +370,9 @@ export async function saveExitLead(req, res) {
     }
     if (offerId && mongoose.isValidObjectId(offerId)) {
       update.$set.offerId = offerId;
+      const off = await findActiveOffer(offerId);
+      if (off?.productId) update.$set.productId = off.productId;
+      if (off?.accountId) update.$set.accountId = off.accountId;
     }
 
     await IncompleteOrder.updateOne(
@@ -391,8 +397,8 @@ const TRACKED_EVENTS = ['call', 'whatsapp', 'order_click'];
  */
 export async function recordEvent(req, res) {
   try {
-    const { event, productId } = req.body || {};
-    if (TRACKED_EVENTS.includes(event)) await DailyStat.recordEvent(event, productId);
+    const { event, productId, accountId } = req.body || {};
+    if (TRACKED_EVENTS.includes(event)) await DailyStat.recordEvent(event, productId, accountId);
   } catch (err) {
     reportError('analytics-event', err);
   }
@@ -406,8 +412,8 @@ export async function recordEvent(req, res) {
  */
 export async function recordSectionDwell(req, res) {
   try {
-    const { dwell = {}, exitSection = '', views = [], productId } = req.body || {};
-    await DailyStat.recordSectionDwell({ dwell, exitSection, views, productId });
+    const { dwell = {}, exitSection = '', views = [], productId, accountId } = req.body || {};
+    await DailyStat.recordSectionDwell({ dwell, exitSection, views, productId, accountId });
     return res.status(204).end();
   } catch (err) {
     reportError('section-dwell', err);

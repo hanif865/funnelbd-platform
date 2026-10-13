@@ -39,11 +39,15 @@ export async function getDashboard(req, res, next) {
     const weekStart = startOf(6);
     const monthStart = startOf(29);
 
-    // Funnel scope (orders + stats). Empty = across all funnels.
+    // Tenant scope + optional funnel scope. Empty funnel = all this account's.
+    // Cast to ObjectId: aggregate $match does NOT auto-cast like find() does.
+    const accountId = req.accountId && mongoose.isValidObjectId(req.accountId)
+      ? new mongoose.Types.ObjectId(req.accountId)
+      : null;
     const funnel = req.query.funnel;
     const pid = funnel && mongoose.isValidObjectId(funnel) ? new mongoose.Types.ObjectId(funnel) : null;
-    const orderMatch = pid ? { productId: pid } : {};
-    const statMatch = pid ? { productId: pid } : {};
+    const orderMatch = pid ? { accountId, productId: pid } : { accountId };
+    const statMatch = pid ? { accountId, productId: pid } : { accountId };
 
     const [today, yesterday, week, month] = await Promise.all([
       rangeStats(todayStart, null, orderMatch),

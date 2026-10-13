@@ -1,10 +1,13 @@
+import mongoose from 'mongoose';
 import { Product, Offer, FormField, DeliveryZone, Order } from '../models/index.js';
 import { getDefaultProductId } from '../services/catalog.cache.js';
 
-// The tenant this request belongs to (set by auth middleware). All funnel
-// reads/writes are scoped to it so accounts never see each other's funnels.
+// The tenant this request belongs to (set by auth middleware), as an ObjectId so
+// it matches in find(), create() and aggregate() alike (aggregate $match does
+// not auto-cast). All funnel reads/writes are scoped to it.
 function acct(req) {
-  return req.accountId || null;
+  const id = req.accountId;
+  return id && mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null;
 }
 
 // ─── slug helpers ───────────────────────────────────────────

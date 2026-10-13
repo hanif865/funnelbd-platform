@@ -34,27 +34,27 @@ function toPid(productId) {
   try { return new mongoose.Types.ObjectId(productId); } catch { return null; }
 }
 
-dailyStatSchema.statics.track = function (isNewVisitor, productId = null) {
+dailyStatSchema.statics.track = function (isNewVisitor, productId = null, accountId = null) {
   const date = dhakaYmd();
   return this.updateOne(
     { date, productId: toPid(productId) },
-    { $inc: { visits: 1, visitors: isNewVisitor ? 1 : 0 } },
+    { $inc: { visits: 1, visitors: isNewVisitor ? 1 : 0 }, $set: { accountId: toPid(accountId) } },
     { upsert: true }
   );
 };
 
 /** Count one interaction (call/whatsapp/order_click) for today. */
-dailyStatSchema.statics.recordEvent = function (name, productId = null, count = 1) {
+dailyStatSchema.statics.recordEvent = function (name, productId = null, accountId = null, count = 1) {
   if (!name || typeof name !== 'string') return;
   const date = dhakaYmd();
   return this.updateOne(
     { date, productId: toPid(productId) },
-    { $inc: { [`events.${name}`]: count } },
+    { $inc: { [`events.${name}`]: count }, $set: { accountId: toPid(accountId) } },
     { upsert: true }
   );
 };
 
-dailyStatSchema.statics.recordSectionDwell = async function ({ date, productId = null, dwell = {}, exitSection = '', views = [] } = {}) {
+dailyStatSchema.statics.recordSectionDwell = async function ({ date, productId = null, accountId = null, dwell = {}, exitSection = '', views = [] } = {}) {
   const targetDate = date || dhakaYmd();
   const inc = {};
 
@@ -83,7 +83,7 @@ dailyStatSchema.statics.recordSectionDwell = async function ({ date, productId =
 
   return this.updateOne(
     { date: targetDate, productId: toPid(productId) },
-    { $inc: inc },
+    { $inc: inc, $set: { accountId: toPid(accountId) } },
     { upsert: true }
   );
 };
