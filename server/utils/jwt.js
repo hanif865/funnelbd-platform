@@ -3,7 +3,12 @@ import { config } from '../config/index.js';
 
 export function signAdminToken(admin) {
   return jwt.sign(
-    { sub: String(admin._id), role: admin.role, name: admin.name },
+    {
+      sub: String(admin._id),
+      role: admin.role,
+      name: admin.name,
+      accountId: admin.accountId ? String(admin.accountId) : null,
+    },
     config.jwt.secret,
     { expiresIn: config.jwt.expiresIn }
   );

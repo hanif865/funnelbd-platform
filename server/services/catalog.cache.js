@@ -61,9 +61,13 @@ export function invalidateCatalogCache() {
   generation++;
 }
 
-/** The default funnel's product id (first active product), or null. */
-export async function getDefaultProductId() {
-  const p = await Product.findOne({ active: true }).sort({ createdAt: 1 }).select('_id').lean();
+/** The default funnel's product id (first active product), or null.
+ *  Pass an accountId (including null) to scope to one tenant; omit it to keep
+ *  the legacy account-agnostic behaviour (used by not-yet-scoped callers). */
+export async function getDefaultProductId(accountId) {
+  const where = { active: true };
+  if (accountId !== undefined) where.accountId = accountId || null;
+  const p = await Product.findOne(where).sort({ createdAt: 1 }).select('_id').lean();
   return p ? p._id : null;
 }
 

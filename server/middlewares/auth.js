@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { verifyToken } from '../utils/jwt.js';
 import { Admin } from '../models/index.js';
 
@@ -37,6 +38,17 @@ export async function requireAdmin(req, res, next) {
   }
 
   req.admin = admin;
+  req.isSuperadmin = admin.role === 'superadmin';
+
+  // Which Account this request operates on. A normal admin/staff user is locked
+  // to their own account; the platform superadmin picks one per request via
+  // ?account=<id> or the X-Account-Id header (null = none selected yet).
+  if (req.isSuperadmin) {
+    const sel = req.query.account || req.headers['x-account-id'];
+    req.accountId = sel && mongoose.isValidObjectId(sel) ? String(sel) : null;
+  } else {
+    req.accountId = admin.accountId ? String(admin.accountId) : null;
+  }
   next();
 }
 
@@ -55,10 +67,13 @@ export function requireAdminToken(req, res, next) {
   }
 }
 
-/** Restricts a route to specific roles (e.g. requireRole('admin')). */
+/**
+ * Restricts a route to specific roles (e.g. requireRole('admin')). The platform
+ * superadmin satisfies every role check.
+ */
 export function requireRole(...roles) {
   return (req, res, next) => {
-    if (!req.admin || !roles.includes(req.admin.role)) {
+    if (!req.admin || (req.admin.role !== 'superadmin' && !roles.includes(req.admin.role))) {
       return res.status(403).json({ error: 'You do not have permission for this action.' });
     }
     next();

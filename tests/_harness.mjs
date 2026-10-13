@@ -8,16 +8,21 @@ import mongoose from 'mongoose';
 if (!process.env.MONGOMS_VERSION) process.env.MONGOMS_VERSION = '6.0.14';
 process.env.NODE_ENV = 'test';
 
-/** A fake Express req/res so controllers can be called directly in-process. */
-export function callController(fn, { query = {}, body = {}, params = {} } = {}) {
+/** A fake Express req/res so controllers can be called directly in-process.
+ *  `accountId`/`admin`/`isSuperadmin` mimic what the auth middleware sets. */
+export function callController(fn, { query = {}, body = {}, params = {}, accountId, admin, isSuperadmin, headers = {} } = {}) {
   return new Promise((resolve, reject) => {
+    const req = { query, body, params, headers };
+    if (accountId !== undefined) req.accountId = accountId ? String(accountId) : null;
+    if (admin !== undefined) req.admin = admin;
+    if (isSuperadmin !== undefined) req.isSuperadmin = isSuperadmin;
     const res = {
       statusCode: 200,
       status(c) { this.statusCode = c; return this; },
       json(payload) { resolve({ status: this.statusCode, body: payload }); return this; },
       send(payload) { resolve({ status: this.statusCode, body: payload }); return this; },
     };
-    Promise.resolve(fn({ query, body, params }, res, (err) => reject(err || new Error('next() called')))).catch(reject);
+    Promise.resolve(fn(req, res, (err) => reject(err || new Error('next() called')))).catch(reject);
   });
 }
 

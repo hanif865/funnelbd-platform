@@ -1,6 +1,12 @@
 import { Product, Offer, FormField, DeliveryZone, Order } from '../models/index.js';
 import { getDefaultProductId } from '../services/catalog.cache.js';
 
+// The tenant this request belongs to (set by auth middleware). All funnel
+// reads/writes are scoped to it so accounts never see each other's funnels.
+function acct(req) {
+  return req.accountId || null;
+}
+
 // ─── slug helpers ───────────────────────────────────────────
 function slugify(s) {
   return String(s || '')
@@ -12,14 +18,14 @@ function slugify(s) {
     .replace(/^-|-$/g, '');
 }
 
-/** Find a slug not already used by another product (append -2, -3, …). */
-async function uniqueSlug(base, excludeId = null) {
+/** A slug unused by another funnel in the same account (append -2, -3, …). */
+async function uniqueSlug(base, accountId, excludeId = null) {
   const root = base || 'funnel';
   let slug = root;
   let n = 1;
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const where = { slug };
+    const where = { slug, accountId };
     if (excludeId) where._id = { $ne: excludeId };
     const clash = await Product.findOne(where).select('_id').lean();
     if (!clash) return slug;
@@ -36,38 +42,43 @@ function stripMeta(doc) {
 /**
  * Seed a new funnel's checkout from an existing one so it works immediately:
  * copy its form fields and delivery zones (and optionally its offers), stamped
- * with the new funnel's id. `fromPid` null reads the legacy/shared defaults.
+ * with the new funnel's id + account. `fromPid` null reads the account's
+ * legacy/shared defaults.
  */
-async function copyCatalog(fromPid, toPid, { includeOffers = false } = {}) {
+async function copyCatalog(fromPid, toPid, accountId, { includeOffers = false } = {}) {
   const or = fromPid ? { $or: [{ productId: fromPid }, { productId: null }] } : { productId: null };
+  const scoped = { ...or, accountId };
   const [fields, zones, offers] = await Promise.all([
-    FormField.find(or).sort({ order: 1 }).lean(),
-    DeliveryZone.find(or).sort({ order: 1 }).lean(),
-    includeOffers && fromPid ? Offer.find({ productId: fromPid }).sort({ order: 1 }).lean() : Promise.resolve([]),
+    FormField.find(scoped).sort({ order: 1 }).lean(),
+    DeliveryZone.find(scoped).sort({ order: 1 }).lean(),
+    includeOffers && fromPid ? Offer.find({ productId: fromPid, accountId }).sort({ order: 1 }).lean() : Promise.resolve([]),
   ]);
-  if (fields.length) await FormField.insertMany(fields.map((f) => ({ ...stripMeta(f), productId: toPid })));
-  if (zones.length) await DeliveryZone.insertMany(zones.map((z) => ({ ...stripMeta(z), productId: toPid })));
-  if (offers.length) await Offer.insertMany(offers.map((o) => ({ ...stripMeta(o), productId: toPid })));
+  const stamp = (d) => ({ ...stripMeta(d), productId: toPid, accountId });
+  if (fields.length) await FormField.insertMany(fields.map(stamp));
+  if (zones.length) await DeliveryZone.insertMany(zones.map(stamp));
+  if (offers.length) await Offer.insertMany(offers.map(stamp));
 }
 
 /** Guarantee a funnel has at least one offer (the catalog needs one to price). */
-async function ensureOffer(pid, title) {
+async function ensureOffer(pid, accountId, title) {
   const n = await Offer.countDocuments({ productId: pid });
   if (!n) {
-    await Offer.create({ productId: pid, title: title || 'অফার', price: 0, quantity: 1, isDefault: true, active: true, order: 1 });
+    await Offer.create({ productId: pid, accountId, title: title || 'অফার', price: 0, quantity: 1, isDefault: true, active: true, order: 1 });
   }
 }
 
 // ─── Handlers ───────────────────────────────────────────────
 
-/** GET /api/admin/funnels → all funnels with offer/order counts. */
+/** GET /api/admin/funnels → this account's funnels with offer/order counts. */
 export async function listFunnels(req, res, next) {
   try {
+    const accountId = acct(req);
+    const match = { accountId };
     const [products, offerCounts, orderCounts, defPid] = await Promise.all([
-      Product.find().sort({ createdAt: 1 }).lean(),
-      Offer.aggregate([{ $group: { _id: '$productId', n: { $sum: 1 } } }]),
-      Order.aggregate([{ $group: { _id: '$productId', n: { $sum: 1 } } }]),
-      getDefaultProductId(),
+      Product.find(match).sort({ createdAt: 1 }).lean(),
+      Offer.aggregate([{ $match: match }, { $group: { _id: '$productId', n: { $sum: 1 } } }]),
+      Order.aggregate([{ $match: match }, { $group: { _id: '$productId', n: { $sum: 1 } } }]),
+      getDefaultProductId(accountId),
     ]);
     const oMap = Object.fromEntries(offerCounts.map((x) => [String(x._id), x.n]));
     const ordMap = Object.fromEntries(orderCounts.map((x) => [String(x._id), x.n]));
@@ -95,18 +106,19 @@ export async function listFunnels(req, res, next) {
 export async function createFunnel(req, res, next) {
   try {
     const b = req.body || {};
+    const accountId = acct(req);
     const name = String(b.name || '').trim();
     if (!name) return res.status(400).json({ error: 'Enter a funnel name.' });
-    const slug = await uniqueSlug(slugify(b.slug || name));
+    const slug = await uniqueSlug(slugify(b.slug || name), accountId);
 
-    const product = await Product.create({ name, slug, active: b.active !== false });
+    const product = await Product.create({ accountId, name, slug, active: b.active !== false });
 
-    // Seed fields + zones from the current default funnel so checkout works.
-    const defPid = await getDefaultProductId();
+    // Seed fields + zones from this account's default funnel so checkout works.
+    const defPid = await getDefaultProductId(accountId);
     if (defPid && String(defPid) !== String(product._id)) {
-      await copyCatalog(defPid, product._id, { includeOffers: false });
+      await copyCatalog(defPid, product._id, accountId, { includeOffers: false });
     }
-    await ensureOffer(product._id, name);
+    await ensureOffer(product._id, accountId, name);
 
     res.status(201).json({ ok: true, funnel: product });
   } catch (err) {
@@ -117,20 +129,21 @@ export async function createFunnel(req, res, next) {
 /** POST /api/admin/funnels/:id/clone → deep-copy a funnel (content + catalog). */
 export async function cloneFunnel(req, res, next) {
   try {
-    const src = await Product.findById(req.params.id).lean();
+    const accountId = acct(req);
+    const src = await Product.findOne({ _id: req.params.id, accountId }).lean();
     if (!src) return res.status(404).json({ error: 'Funnel not found.' });
 
     const b = req.body || {};
     const name = String(b.name || `${src.name} (কপি)`).trim();
-    const slug = await uniqueSlug(slugify(b.slug || name));
+    const slug = await uniqueSlug(slugify(b.slug || name), accountId);
 
     const base = stripMeta(src);
     delete base.slug;
     delete base.name;
-    const product = await Product.create({ ...base, name, slug, active: b.active !== false });
+    const product = await Product.create({ ...base, accountId, name, slug, active: b.active !== false });
 
-    await copyCatalog(src._id, product._id, { includeOffers: true });
-    await ensureOffer(product._id, name);
+    await copyCatalog(src._id, product._id, accountId, { includeOffers: true });
+    await ensureOffer(product._id, accountId, name);
 
     res.status(201).json({ ok: true, funnel: product });
   } catch (err) {
@@ -141,12 +154,13 @@ export async function cloneFunnel(req, res, next) {
 /** PUT /api/admin/funnels/:id → rename / re-slug / activate a funnel. */
 export async function updateFunnel(req, res, next) {
   try {
-    const p = await Product.findById(req.params.id);
+    const accountId = acct(req);
+    const p = await Product.findOne({ _id: req.params.id, accountId });
     if (!p) return res.status(404).json({ error: 'Funnel not found.' });
     const b = req.body || {};
     if (b.name !== undefined) p.name = String(b.name).trim();
     if (b.slug !== undefined && String(b.slug).trim()) {
-      p.slug = await uniqueSlug(slugify(b.slug), p._id);
+      p.slug = await uniqueSlug(slugify(b.slug), accountId, p._id);
     }
     if (b.active !== undefined) p.active = !!b.active;
     await p.save();
@@ -159,12 +173,16 @@ export async function updateFunnel(req, res, next) {
 /** DELETE /api/admin/funnels/:id → remove a funnel and its catalog (no orders). */
 export async function deleteFunnel(req, res, next) {
   try {
+    const accountId = acct(req);
     const id = req.params.id;
-    const total = await Product.countDocuments();
+    const target = await Product.findOne({ _id: id, accountId }).select('_id').lean();
+    if (!target) return res.status(404).json({ error: 'Funnel not found.' });
+
+    const total = await Product.countDocuments({ accountId });
     if (total <= 1) return res.status(400).json({ error: 'At least one funnel is required.' });
 
     // The default funnel (first active) backs legacy/null fallbacks — keep it.
-    const defPid = await getDefaultProductId();
+    const defPid = await getDefaultProductId(accountId);
     if (defPid && String(defPid) === String(id)) {
       return res.status(400).json({ error: 'The default funnel cannot be deleted. Make another funnel the default first.' });
     }
@@ -179,7 +197,7 @@ export async function deleteFunnel(req, res, next) {
       FormField.deleteMany({ productId: id }),
       DeliveryZone.deleteMany({ productId: id }),
     ]);
-    await Product.findByIdAndDelete(id);
+    await Product.deleteOne({ _id: id, accountId });
     res.json({ ok: true });
   } catch (err) {
     next(err);
