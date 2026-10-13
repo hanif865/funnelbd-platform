@@ -80,6 +80,7 @@ import {
 } from '../controllers/superadmin.controller.js';
 import { handleUpload } from '../controllers/upload.controller.js';
 import { signup, checkSubdomain } from '../controllers/signup.controller.js';
+import { aiStatus, generateLanding } from '../controllers/ai.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 import { invalidateCatalogCache } from '../services/catalog.cache.js';
 import { invalidateSettingsCache } from '../services/settings.service.js';
@@ -142,6 +143,10 @@ router.delete('/funnels/:id', requireAdmin, requireRole('admin'), deleteFunnel);
 router.get('/superadmin/accounts', requireAdmin, requireRole('superadmin'), listAccounts);
 router.get('/superadmin/accounts/:id', requireAdmin, requireRole('superadmin'), getAccount);
 router.patch('/superadmin/accounts/:id/status', requireAdmin, requireRole('superadmin'), setAccountStatus);
+
+// ── AI copy generation (admin-only) ──────────────────
+router.get('/ai/status', requireAdmin, aiStatus);
+router.post('/ai/landing', requireAdmin, requireRole('admin'), rateLimit({ windowMs: 60 * 1000, max: 10, message: 'Too many AI requests — wait a moment.' }), generateLanding);
 
 // ── Custom domains (admin-only) ──────────────────────
 router.get('/domains', requireAdmin, requireRole('admin'), listDomains);

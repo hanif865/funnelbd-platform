@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getToken } from '../api.js';
+import { api, getToken } from '../api.js';
 import { useFunnelApi, useFunnel } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
@@ -25,11 +25,29 @@ export default function PageEditor() {
   const [p, setP] = useState(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [aiConfigured, setAiConfigured] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   useEffect(() => {
     setP(null);
     fapi('/product').then((d) => setP(normalize(d.product)));
   }, [fapi]);
+
+  useEffect(() => {
+    api('/ai/status').then((d) => setAiConfigured(!!d.configured)).catch(() => {});
+  }, []);
+
+  // Apply AI-generated copy into the editor (not saved until the user Publishes).
+  function applyAi(gen) {
+    setP((x) => ({
+      ...x,
+      name: gen.name || x.name,
+      description: gen.description || x.description,
+      content: { ...x.content, ...(gen.content || {}) },
+    }));
+    // Leave the modal open so it can show the suggested offers; the user closes it.
+    setMsg('AI draft applied — review the fields, then Publish.');
+  }
 
   function normalize(prod) {
     if (!prod) return null;
@@ -120,8 +138,17 @@ export default function PageEditor() {
             Each section is arranged in the visual order of the live funnel.
           </p>
         </div>
-        <a className="btn-ghost" href={current?.slug ? `/funnel-step/${current.slug}/` : '/funnel-step/checkout/'} target="_blank" rel="noreferrer">Live page <Icon name="external" size={15} /></a>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {aiConfigured && (
+            <button className="btn-primary" onClick={() => setAiOpen(true)} title="Draft the whole page with AI">
+              ✨ Generate with AI
+            </button>
+          )}
+          <a className="btn-ghost" href={current?.slug ? `/funnel-step/${current.slug}/` : '/funnel-step/checkout/'} target="_blank" rel="noreferrer">Live page <Icon name="external" size={15} /></a>
+        </div>
       </div>
+
+      {aiOpen && <AiModal initialName={p.name} onClose={() => setAiOpen(false)} onApply={applyAi} />}
 
       {/* ── 1. Brand & top bar ── */}
       <div className="card">
@@ -419,6 +446,57 @@ function ImageGrid({ images, onAdd, onRemove }) {
           }}
         />
       </label>
+    </div>
+  );
+}
+
+// ── AI landing-copy generator ───────────────────────────────
+function AiModal({ initialName, onClose, onApply }) {
+  const [form, setForm] = useState({ productName: initialName || '', notes: '', language: 'bn' });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [offers, setOffers] = useState(null);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  async function generate() {
+    if (!form.productName.trim()) { setErr('Enter a product name.'); return; }
+    setBusy(true); setErr(''); setOffers(null);
+    try {
+      const r = await api('/ai/landing', { method: 'POST', body: form });
+      setOffers(r.offers || []);
+      onApply(r); // fills the editor; modal shows offer suggestions then closes via parent
+    } catch (e) {
+      setErr(e.message || 'Generation failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head"><h3>✨ Generate landing copy with AI</h3><button className="btn-ghost" onClick={onClose}><Icon name="x" size={16} /></button></div>
+        <p className="muted" style={{ marginTop: 0, fontSize: '.88rem' }}>
+          Give the product name and a few details. AI drafts the headline, benefits, badges and checkout copy — you review and Publish. Prices are placeholders.
+        </p>
+        <div className="fld"><label>Product name</label><input value={form.productName} onChange={set('productName')} placeholder="e.g. Magnetic Posture Corrector Belt" autoFocus /></div>
+        <div className="fld"><label>Details / selling points <span className="muted">(optional)</span></label>
+          <textarea rows={4} value={form.notes} onChange={set('notes')} placeholder="Key features, target customer, offer idea, tone…" />
+        </div>
+        <div className="fld"><label>Language</label>
+          <select value={form.language} onChange={set('language')}><option value="bn">বাংলা (Bangla)</option><option value="en">English</option></select>
+        </div>
+        {err && <p className="err">{err}</p>}
+        {offers && offers.length > 0 && (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', marginTop: 4 }}>
+            <strong style={{ fontSize: '.85rem' }}>Suggested offers</strong> <span className="muted" style={{ fontSize: '.8rem' }}>(add these in the Offers page)</span>
+            <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: '.86rem' }}>
+              {offers.map((o, i) => <li key={i}>{o.title} — {o.quantity} pc · ৳{o.price}</li>)}
+            </ul>
+          </div>
+        )}
+        <div className="save-bar"><button className="btn-primary" onClick={generate} disabled={busy}>{busy ? 'Generating…' : '✨ Generate'}</button></div>
+      </div>
     </div>
   );
 }
