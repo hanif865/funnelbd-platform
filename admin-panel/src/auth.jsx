@@ -45,6 +45,15 @@ export function AuthProvider({ children }) {
     return data.admin;
   }
 
+  /** Create a new tenant account and sign the owner in. */
+  async function signup(payload) {
+    const data = await api('/signup', { method: 'POST', body: payload });
+    setToken(data.token);
+    const me = await api('/me').catch(() => null);
+    setAdmin(me?.admin || null);
+    return data; // { subdomain, funnelUrl, account, ... }
+  }
+
   async function logout() {
     try {
       await api('/logout', { method: 'POST' });
@@ -56,7 +65,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ admin, loading, login, logout }}>
+    <AuthContext.Provider value={{ admin, loading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

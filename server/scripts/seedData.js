@@ -101,7 +101,7 @@ export async function seedDefaults() {
     },
   };
   for (const [key, value] of Object.entries(defaultSettings)) {
-    await Setting.findOneAndUpdate({ key }, { key, value }, { upsert: true });
+    await Setting.findOneAndUpdate({ key, accountId: null }, { key, accountId: null, value }, { upsert: true });
   }
 
   // ── Admin ──

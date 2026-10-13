@@ -66,6 +66,7 @@ import {
   deleteFunnel,
 } from '../controllers/funnel.controller.js';
 import { handleUpload } from '../controllers/upload.controller.js';
+import { signup, checkSubdomain } from '../controllers/signup.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 import { invalidateCatalogCache } from '../services/catalog.cache.js';
 import { invalidateSettingsCache } from '../services/settings.service.js';
@@ -90,6 +91,10 @@ router.use((req, res, next) => {
 // ── Auth ─────────────────────────────────────────────
 router.post('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many failed attempts — try again in 15 minutes.' }), login);
 router.post('/logout', logout);
+
+// ── Public signup (create a new tenant account) ──────
+router.post('/signup', rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: 'Too many signups — try again later.' }), signup);
+router.get('/signup/check', checkSubdomain);
 router.get('/me', requireAdmin, me);
 
 // ── Dashboard ────────────────────────────────────────

@@ -42,6 +42,8 @@ export const config = {
   // can't be hit directly from the internet bypassing Cloudflare/nginx.
   host: (process.env.HOST || '127.0.0.1').trim(),
   baseUrl: (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, ''),
+  // Root domain for free tenant subdomains (<account-slug>.<appDomain>).
+  appDomain: (process.env.APP_DOMAIN || 'funnelbd.com').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase().trim(),
 
   mongoUri: required('MONGODB_URI'),
 
