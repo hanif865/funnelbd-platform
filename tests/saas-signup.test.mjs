@@ -1,7 +1,8 @@
 // SaaS Phase S3b: public signup creates a fully-provisioned tenant.
 import { callController as call, makeT } from './_harness.mjs';
-import { Account, Admin, Domain, Product, Offer, FormField, DeliveryZone } from '../server/models/index.js';
+import { Account, Admin, Domain, Product, Offer, FormField, DeliveryZone, Setting } from '../server/models/index.js';
 import * as signup from '../server/controllers/signup.controller.js';
+import { login } from '../server/controllers/admin.controller.js';
 import { resolveAccountId, invalidateDomainCache } from '../server/services/domain.service.js';
 import { config } from '../server/config/index.js';
 
@@ -39,9 +40,23 @@ export default {
     ok(await DeliveryZone.countDocuments({ accountId: acc._id }) === 2, '2 delivery zones');
     ok(await Offer.countDocuments({ accountId: acc._id }) === 1, '1 starter offer');
 
+    // Sensible per-account defaults seeded.
+    ok(await Setting.countDocuments({ accountId: acc._id, key: 'duplicateCooldown' }) === 1, 'duplicate-cooldown default seeded for the account');
+    ok(await Setting.countDocuments({ accountId: acc._id, key: 'storeInfo' }) === 1, 'store-info shell seeded for the account');
+
     // Host now resolves to the new account.
     invalidateDomainCache();
     ok(String(await resolveAccountId(`acme-shop.${config.appDomain}`)) === String(acc._id), 'host resolves to the new account');
+
+    // The owner can sign in while active; a suspended account blocks login.
+    let r2 = await call(login, { body: { email: 'owner@acme.com', password: 'secret12' } });
+    ok(r2.status === 200 && r2.body.token, 'active owner can log in');
+    await Account.updateOne({ _id: acc._id }, { status: 'suspended' });
+    invalidateDomainCache();
+    r2 = await call(login, { body: { email: 'owner@acme.com', password: 'secret12' } });
+    ok(r2.status === 403, 'suspended account blocks owner login');
+    await Account.updateOne({ _id: acc._id }, { status: 'active' });
+    invalidateDomainCache();
 
     // Duplicate email rejected.
     r = await call(signup.signup, { body: { businessName: 'Other', email: 'owner@acme.com', password: 'secret12' } });

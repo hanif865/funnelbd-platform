@@ -28,7 +28,9 @@ export function AuthProvider({ children }) {
     api('/me')
       .then((data) => setAdmin(data.admin))
       .catch((err) => {
-        if (err.status === 401) return setToken('');
+        // 401 = bad/expired session; 403 = account suspended mid-session. Both
+        // mean "log out cleanly" rather than show a half-working panel.
+        if (err.status === 401 || err.status === 403) { setToken(''); setImpersonate(''); return; }
         // Server/DB trouble (503, network) — not a bad session. Stay logged in
         // from the token's claims so the panel can show what's wrong.
         const claims = readTokenClaims(getToken());

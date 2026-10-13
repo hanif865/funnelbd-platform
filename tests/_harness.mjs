@@ -21,6 +21,9 @@ export function callController(fn, { query = {}, body = {}, params = {}, account
       status(c) { this.statusCode = c; return this; },
       json(payload) { resolve({ status: this.statusCode, body: payload }); return this; },
       send(payload) { resolve({ status: this.statusCode, body: payload }); return this; },
+      cookie() { return this; },       // express res.cookie (no-op in tests)
+      clearCookie() { return this; },
+      setHeader() { return this; },
     };
     Promise.resolve(fn(req, res, (err) => reject(err || new Error('next() called')))).catch(reject);
   });

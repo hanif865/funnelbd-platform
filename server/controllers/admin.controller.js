@@ -6,6 +6,7 @@ import { ADMIN_COOKIE_NAME } from '../middlewares/auth.js';
 import { config } from '../config/index.js';
 import { normalizePhone } from '../utils/phone.js';
 import { sendToCourier, fraudCheck } from '../services/courier.service.js';
+import { getAccountStatus } from '../services/domain.service.js';
 
 // The tenant this request belongs to (set by auth middleware), as an ObjectId
 // (aggregate $match does not auto-cast). Every order query is scoped to it so
@@ -28,6 +29,14 @@ export async function login(req, res, next) {
     }
     const ok = await bcrypt.compare(password, admin.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Wrong email or password.' });
+
+    // A suspended tenant's own admins/staff cannot sign in (superadmin exempt).
+    if (admin.role !== 'superadmin' && admin.accountId) {
+      const status = await getAccountStatus(admin.accountId);
+      if (status === 'suspended' || status === 'missing') {
+        return res.status(403).json({ error: 'This account is suspended. Please contact support.' });
+      }
+    }
 
     const token = signAdminToken(admin);
     res.cookie(ADMIN_COOKIE_NAME, token, {

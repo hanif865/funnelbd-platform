@@ -1,4 +1,5 @@
 import { Product, Offer, FormField, DeliveryZone } from '../models/index.js';
+import { setSetting } from './settings.service.js';
 
 /**
  * Seed a brand-new account with a working starter funnel so it can take orders
@@ -30,6 +31,15 @@ export async function provisionStarterFunnel(accountId, { name = 'আমার �
   ]);
 
   await Offer.create({ accountId, productId: product._id, title: '১ পিস', price: 0, quantity: 1, isDefault: true, active: true, order: 1 });
+
+  // Sensible per-account defaults so a new store behaves well out of the box
+  // (duplicate guard on; a store-info shell to fill in). SMS/courier stay empty.
+  await setSetting('duplicateCooldown', accountId, {
+    enabled: true,
+    hours: 24,
+    message: 'আপনার অর্ডারটি আমরা ইতিমধ্যে পেয়েছি! আমাদের টিম শীঘ্রই যোগাযোগ করবে।',
+  });
+  await setSetting('storeInfo', accountId, { phones: [], phone: '', address: '' });
 
   return product;
 }
