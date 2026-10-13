@@ -4,7 +4,8 @@ const productSchema = new mongoose.Schema(
   {
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', default: null, index: true },
     name: { type: String, required: true, trim: true }, // hero headline
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    // Slug is unique within an account (two tenants may both use "checkout").
+    slug: { type: String, required: true, trim: true, lowercase: true },
     description: { type: String, default: '' }, // benefit rich text (HTML)
     images: { type: [String], default: [] }, // hero gallery
     // Landing-page content editable from the admin Page Editor.
@@ -34,6 +35,9 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true, collection: 'products' }
 );
+
+// Slug unique per account (not globally).
+productSchema.index({ accountId: 1, slug: 1 }, { unique: true });
 
 export const Product = mongoose.model('Product', productSchema);
 export default Product;

@@ -120,7 +120,7 @@ export async function convertIncomplete(req, res, next) {
         tracking: t,
       },
       // Carry the captured ip/ua/session so the Purchase match quality stays high.
-      { source: 'Admin', skipDuplicateCheck: true, ip: t.ip, userAgent: t.userAgent, externalId: t.externalId }
+      { source: 'Admin', skipDuplicateCheck: true, accountId: acct(req), ip: t.ip, userAgent: t.userAgent, externalId: t.externalId }
     );
 
     item.status = 'converted';

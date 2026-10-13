@@ -9,8 +9,13 @@ import {
   recordEvent,
 } from '../controllers/public.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
+import { resolvePublicAccount } from '../services/domain.service.js';
 
 const router = Router();
+
+// Resolve which tenant this public request belongs to (from the Host header)
+// before any landing render or checkout, so the right account's funnel is served.
+router.use(resolvePublicAccount);
 
 const MIN = 60 * 1000;
 const checkoutLimit = rateLimit({ windowMs: 10 * MIN, max: 20 });

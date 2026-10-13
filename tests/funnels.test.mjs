@@ -57,9 +57,9 @@ export default {
 
     // landing still renders per slug
     invalidateCatalogCache();
-    const cat = await getCatalog('magnetic-belt');
+    const cat = await getCatalog(null, 'magnetic-belt');
     ok(cat.product?.slug === 'magnetic-belt' && cat.offers.length === 2, 'landing renders f2');
-    const cat0 = await getCatalog(null);
+    const cat0 = await getCatalog(null, null);
     ok(String(cat0.product._id) === String(def._id), 'default landing unchanged');
 
     // delete guards

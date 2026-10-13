@@ -98,10 +98,11 @@ function seenRecently(key) {
  */
 export async function renderLanding(req, res, next) {
   try {
+    const accountId = req.publicAccountId || null;
     const slug = req.params.slug || null;
-    // An unknown slug falls back to the default funnel rather than 404ing.
-    let { product, offers, fields, zones } = await getCatalog(slug);
-    if (!product && slug) ({ product, offers, fields, zones } = await getCatalog(null));
+    // An unknown slug falls back to this account's default funnel rather than 404ing.
+    let { product, offers, fields, zones } = await getCatalog(accountId, slug);
+    if (!product && slug) ({ product, offers, fields, zones } = await getCatalog(accountId, null));
     if (!product) {
       return res.status(503).send('কোনো প্রোডাক্ট কনফিগার করা হয়নি। অ্যাডমিন প্যানেল থেকে যোগ করুন।');
     }
@@ -164,6 +165,7 @@ export async function submitCheckout(req, res, next) {
     }
 
     const meta = {
+      accountId: req.publicAccountId || null, // tenant resolved from the Host header
       ip: req.clientIp,
       userAgent: req.clientUserAgent,
       sessionId: req.sessionId,
@@ -261,7 +263,7 @@ export async function saveDraft(req, res) {
     // Stamp the funnel + account (from the chosen offer) so the incomplete
     // order is scoped to the right tenant and funnel.
     if (offerId) {
-      const off = await findActiveOffer(offerId);
+      const off = await findActiveOffer(offerId, req.publicAccountId || null);
       if (off?.productId) set.productId = off.productId;
       if (off?.accountId) set.accountId = off.accountId;
     }
@@ -372,7 +374,7 @@ export async function saveExitLead(req, res) {
     }
     if (offerId && mongoose.isValidObjectId(offerId)) {
       update.$set.offerId = offerId;
-      const off = await findActiveOffer(offerId);
+      const off = await findActiveOffer(offerId, req.publicAccountId || null);
       if (off?.productId) update.$set.productId = off.productId;
       if (off?.accountId) update.$set.accountId = off.accountId;
     }

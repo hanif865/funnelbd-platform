@@ -43,11 +43,11 @@ export function computeDeliveryCharge(zoneCharge, subtotal, freeDelivery) {
  * Pricing model: an offer is a card (e.g. "2 pcs — 1,099৳"); the quantity
  * stepper multiplies that card. subtotal = offer.price × quantity.
  */
-export async function calculatePricing({ offer: offerIn, offerId, quantity, deliveryZoneId, discount = 0 }) {
-  const offer = offerIn || (await findActiveOffer(offerId));
+export async function calculatePricing({ offer: offerIn, offerId, quantity, deliveryZoneId, discount = 0, accountId = null }) {
+  const offer = offerIn || (await findActiveOffer(offerId, accountId));
   if (!offer) throw new OrderValidationError('নির্বাচিত অফারটি এখন আর নেই।', { offerId: 'invalid' });
 
-  const zone = await findActiveZone(deliveryZoneId);
+  const zone = await findActiveZone(deliveryZoneId, offer.accountId || accountId);
   if (!zone) {
     throw new OrderValidationError('ডেলিভারি এলাকা সঠিক নয়।', { deliveryZoneId: 'invalid' });
   }
@@ -69,8 +69,8 @@ export async function calculatePricing({ offer: offerIn, offerId, quantity, deli
  * Splits answers into the three core customer fields and the rest
  * (customFields). Enforces required + phone format server-side.
  */
-export async function validateFields(fields = {}, productId = null) {
-  const defs = productId ? await getFunnelFields(productId) : (await getCatalog()).fields;
+export async function validateFields(fields = {}, productId = null, accountId = null) {
+  const defs = productId ? await getFunnelFields(accountId, productId) : (await getCatalog(accountId)).fields;
   const errors = {};
   const customer = {};
   const customFields = {};
@@ -154,12 +154,15 @@ export async function findDuplicate(phone, accountId = null) {
 export async function createOrder(payload, meta = {}) {
   // Resolve the offer first so we know which funnel this order belongs to, and
   // validate the form against that funnel's fields.
-  const offer = await findActiveOffer(payload.offerId);
+  // Scope the offer lookup to the request's tenant (from the resolved host) so a
+  // checkout can never reference another account's offer.
+  const reqAccountId = meta.accountId || null;
+  const offer = await findActiveOffer(payload.offerId, reqAccountId);
   if (!offer) throw new OrderValidationError('নির্বাচিত অফারটি এখন আর নেই।', { offerId: 'invalid' });
   const productId = offer.productId || null;
   const accountId = offer.accountId || null; // the tenant that owns this funnel
 
-  const { customer, customFields, customFieldLabels, variantSummary } = await validateFields(payload.fields, productId);
+  const { customer, customFields, customFieldLabels, variantSummary } = await validateFields(payload.fields, productId, accountId);
 
   // Duplicate check before we spend an order number. Admin "convert to order"
   // passes skipDuplicateCheck since the admin is deliberately creating it.
@@ -174,6 +177,7 @@ export async function createOrder(payload, meta = {}) {
     quantity: payload.quantity,
     deliveryZoneId: payload.deliveryZoneId,
     discount: payload.discount || 0,
+    accountId,
   });
 
   const orderNumber = await Counter.next('orderNumber', 1001);
