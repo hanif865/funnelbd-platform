@@ -79,3 +79,23 @@ export function useFunnelApi() {
     [funnelId]
   );
 }
+
+/**
+ * Standalone funnel picker for analytics / list pages (Dashboard, Orders,
+ * Incomplete). Unlike the top-bar editing switcher, it offers an "All funnels"
+ * option and keeps its own per-page value. Hidden when there's a single funnel.
+ *   const [funnel, setFunnel] = useState('');   // '' = all
+ *   <FunnelFilter value={funnel} onChange={setFunnel} />
+ */
+export function FunnelFilter({ value, onChange }) {
+  const { funnels } = useFunnel();
+  if (funnels.length <= 1) return null;
+  return (
+    <select className="funnel-filter" value={value} onChange={(e) => onChange(e.target.value)} title="Filter by funnel">
+      <option value="">All funnels</option>
+      {funnels.map((f) => (
+        <option key={f._id} value={f._id}>{f.name || f.slug}</option>
+      ))}
+    </select>
+  );
+}

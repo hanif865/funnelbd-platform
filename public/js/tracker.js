@@ -217,7 +217,7 @@
   // ── Interaction events (call / whatsapp / order-button clicks) ──
   function trackEvent(name) {
     try {
-      var body = JSON.stringify({ event: name });
+      var body = JSON.stringify({ event: name, productId: F.productId });
       if (navigator.sendBeacon) {
         navigator.sendBeacon('/api/analytics/event', new Blob([body], { type: 'application/json' }));
       } else {
@@ -456,6 +456,7 @@
       dwell: sectionDwell,
       exitSection: isExit ? currentSection : '',
       views: Object.keys(sectionViews),
+      productId: F.productId,
     };
 
     var url = '/api/analytics/section-dwell';

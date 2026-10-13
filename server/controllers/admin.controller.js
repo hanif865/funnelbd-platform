@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 import { Admin, Order, ORDER_STATUSES } from '../models/index.js';
 import { signAdminToken } from '../utils/jwt.js';
 import { ADMIN_COOKIE_NAME } from '../middlewares/auth.js';
@@ -56,7 +57,9 @@ export async function listOrders(req, res, next) {
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit || '20', 10)));
 
+    const { funnel } = req.query;
     const filter = {};
+    if (funnel && mongoose.isValidObjectId(funnel)) filter.productId = new mongoose.Types.ObjectId(funnel);
     if (status && ORDER_STATUSES.includes(status)) filter.status = status;
     if (source) filter.source = source;
     if (dateFrom || dateTo) {
@@ -75,6 +78,9 @@ export async function listOrders(req, res, next) {
       filter.$or = or;
     }
 
+    // Status chips count within the selected funnel (if any).
+    const countMatch = filter.productId ? { productId: filter.productId } : {};
+
     const [orders, total, statusCounts] = await Promise.all([
       Order.find(filter)
         .sort({ createdAt: -1 })
@@ -82,7 +88,7 @@ export async function listOrders(req, res, next) {
         .limit(limit)
         .lean(),
       Order.countDocuments(filter),
-      Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      Order.aggregate([{ $match: countMatch }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     ]);
 
     const counts = Object.fromEntries(statusCounts.map((s) => [s._id, s.count]));
@@ -235,8 +241,9 @@ export async function bulkCourier(req, res, next) {
 /** GET /api/admin/orders/export → CSV of filtered orders. */
 export async function exportOrders(req, res, next) {
   try {
-    const { status, source, search, dateFrom, dateTo } = req.query;
+    const { status, source, search, dateFrom, dateTo, funnel } = req.query;
     const filter = {};
+    if (funnel && mongoose.isValidObjectId(funnel)) filter.productId = new mongoose.Types.ObjectId(funnel);
     if (status && ORDER_STATUSES.includes(status)) filter.status = status;
     if (source) filter.source = source;
     if (dateFrom || dateTo) {

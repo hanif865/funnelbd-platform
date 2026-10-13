@@ -117,7 +117,7 @@ export async function renderLanding(req, res, next) {
     const settings = { storeInfo, freeDelivery };
 
     // Traffic counter for the dashboard conversion rate (fire-and-forget).
-    DailyStat.track(req.isNewSession).catch((e) => reportError('traffic-stat', e));
+    DailyStat.track(req.isNewSession, pid).catch((e) => reportError('traffic-stat', e));
 
     const defaultOffer = offers.find((o) => o.isDefault) || offers[0] || null;
     const defaultZone = zones.find((z) => z.isDefault) || zones[0] || null;
@@ -391,8 +391,8 @@ const TRACKED_EVENTS = ['call', 'whatsapp', 'order_click'];
  */
 export async function recordEvent(req, res) {
   try {
-    const { event } = req.body || {};
-    if (TRACKED_EVENTS.includes(event)) await DailyStat.recordEvent(event);
+    const { event, productId } = req.body || {};
+    if (TRACKED_EVENTS.includes(event)) await DailyStat.recordEvent(event, productId);
   } catch (err) {
     reportError('analytics-event', err);
   }
@@ -406,8 +406,8 @@ export async function recordEvent(req, res) {
  */
 export async function recordSectionDwell(req, res) {
   try {
-    const { dwell = {}, exitSection = '', views = [] } = req.body || {};
-    await DailyStat.recordSectionDwell({ dwell, exitSection, views });
+    const { dwell = {}, exitSection = '', views = [], productId } = req.body || {};
+    await DailyStat.recordSectionDwell({ dwell, exitSection, views, productId });
     return res.status(204).end();
   } catch (err) {
     reportError('section-dwell', err);

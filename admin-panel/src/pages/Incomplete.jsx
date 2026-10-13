@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { money, num } from '../constants.js';
 import { Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
+import { FunnelFilter } from '../funnel.jsx';
 
 const INC_STATUS = { new: 'New', called: 'Called', converted: 'Converted', dead: 'Dead' };
 const INC_COLOR = { new: '#3b82f6', called: '#f59e0b', converted: '#10b981', dead: '#6b7280' };
@@ -23,6 +24,7 @@ function waLink(phone) {
 export default function Incomplete() {
   const [data, setData] = useState({ items: [], statusCounts: {} });
   const [status, setStatus] = useState('');
+  const [funnel, setFunnel] = useState('');
   const [loading, setLoading] = useState(true);
   const [convert, setConvert] = useState(null); // incomplete being converted
   const [msg, setMsg] = useState('');
@@ -30,12 +32,12 @@ export default function Incomplete() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await api('/incomplete', { params: { status } });
+      const d = await api('/incomplete', { params: { status, funnel } });
       setData(d);
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, funnel]);
   useEffect(() => { load(); }, [load]);
 
   async function setStatusOf(id, s) {
@@ -57,8 +59,11 @@ export default function Incomplete() {
   return (
     <div>
       <div className="page-head">
-        <h1>Incomplete orders</h1>
-        <p className="muted" style={{ margin: 0 }}>The phone number is the real asset — follow up and win the sale back.</p>
+        <div>
+          <h1>Incomplete orders</h1>
+          <p className="muted" style={{ margin: 0 }}>The phone number is the real asset — follow up and win the sale back.</p>
+        </div>
+        <FunnelFilter value={funnel} onChange={setFunnel} />
       </div>
 
       <div className="tabs">
@@ -139,7 +144,12 @@ function ConvertModal({ item, onClose, onDone }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    Promise.all([api('/incomplete/offers'), api('/zones'), api('/fields')]).then(([o, z, f]) => {
+    const params = { funnel: item.productId || undefined };
+    Promise.all([
+      api('/incomplete/offers', { params }),
+      api('/zones', { params }),
+      api('/fields', { params }),
+    ]).then(([o, z, f]) => {
       setOffers(o.offers);
       setZones(z.zones.filter((x) => x.active));
       setFields(f.fields.filter((x) => x.active));

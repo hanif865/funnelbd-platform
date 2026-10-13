@@ -1,6 +1,27 @@
 import mongoose from 'mongoose';
 import { connectDB } from '../config/db.js';
-import { Product, Offer, FormField, DeliveryZone, Order, IncompleteOrder } from '../models/index.js';
+import { Product, Offer, FormField, DeliveryZone, Order, IncompleteOrder, DailyStat } from '../models/index.js';
+
+/**
+ * DailyStat went from one row per day to one row per (day, funnel). Drop the old
+ * `date` unique index so per-funnel rows can coexist, and build the compound
+ * unique index. Existing day-only rows keep productId null (the "all funnels"
+ * bucket). Safe to run repeatedly.
+ */
+async function migrateDailyStatIndexes(apply) {
+  const coll = DailyStat.collection;
+  let indexes = [];
+  try { indexes = await coll.indexes(); } catch { return; }
+  const oldDateIdx = indexes.find((i) => i.unique && i.key && i.key.date === 1 && Object.keys(i.key).length === 1);
+  console.log(`[funnel-migrate] daily_stats old unique date index: ${oldDateIdx ? oldDateIdx.name : 'none'}`);
+  if (!apply) return;
+  if (oldDateIdx) {
+    await coll.dropIndex(oldDateIdx.name);
+    console.log(`[funnel-migrate] dropped daily_stats index ${oldDateIdx.name}`);
+  }
+  await DailyStat.syncIndexes();
+  console.log('[funnel-migrate] daily_stats indexes synced (compound date+productId unique).');
+}
 
 /**
  * Multi-funnel groundwork: stamp every existing form field, delivery zone, order
@@ -41,6 +62,8 @@ async function run() {
     incomplete: await IncompleteOrder.countDocuments({ productId: null }),
   };
   console.log(`[funnel-migrate] to stamp → fields: ${need.fields}, zones: ${need.zones}, orders: ${need.orders}, incomplete: ${need.incomplete}`);
+
+  await migrateDailyStatIndexes(apply);
 
   if (!apply) {
     console.log('[funnel-migrate] dry run only — re-run with --apply to write.');

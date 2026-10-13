@@ -5,6 +5,7 @@ import { STATUSES, fmtDate, money, num, fieldLabel } from '../constants.js';
 import { StatusPill, Pill, Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import { useAuth } from '../auth.jsx';
+import { FunnelFilter } from '../funnel.jsx';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function Orders() {
   const [data, setData] = useState({ orders: [], pagination: {}, statusCounts: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ status: '', search: '', source: '', page: 1 });
+  const [filters, setFilters] = useState({ status: '', search: '', source: '', funnel: '', page: 1 });
   const [sel, setSel] = useState(new Set());
   const [bulkStatus, setBulkStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -61,6 +62,7 @@ export default function Orders() {
       <div className="page-head">
         <h1>Orders</h1>
         <div className="head-tools">
+          <FunnelFilter value={filters.funnel} onChange={(v) => setFilter({ funnel: v })} />
           <form className="search" onSubmit={(e) => { e.preventDefault(); load(); }}>
             <input placeholder="Phone / name / order number" value={filters.search} onChange={(e) => setFilter({ search: e.target.value })} />
             <button className="btn-primary" type="submit">Search</button>

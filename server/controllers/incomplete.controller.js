@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { IncompleteOrder, INCOMPLETE_STATUSES, Offer } from '../models/index.js';
 import { createOrder } from '../services/order.service.js';
 import { sendFollowUpSms } from '../services/sms.service.js';
@@ -13,8 +14,12 @@ import { reportError } from '../services/systemErrors.js';
  */
 export async function listIncomplete(req, res, next) {
   try {
-    const { status, search } = req.query;
+    const { status, search, funnel } = req.query;
     const filter = {};
+    const funnelMatch = funnel && mongoose.isValidObjectId(funnel)
+      ? { productId: new mongoose.Types.ObjectId(funnel) }
+      : {};
+    Object.assign(filter, funnelMatch);
     if (status && INCOMPLETE_STATUSES.includes(status)) filter.status = status;
     else filter.status = { $in: ['new', 'called'] }; // default: still recoverable
     if (search) {
@@ -32,6 +37,7 @@ export async function listIncomplete(req, res, next) {
       .lean();
 
     const statusCounts = await IncompleteOrder.aggregate([
+      { $match: funnelMatch },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
 
@@ -133,7 +139,10 @@ export async function convertIncomplete(req, res, next) {
 /** GET /api/admin/incomplete/offers → offers for the convert form dropdown. */
 export async function offersForConvert(req, res, next) {
   try {
-    const offers = await Offer.find({ active: true }).sort({ order: 1 }).select('title price').lean();
+    const { funnel } = req.query;
+    const where = { active: true };
+    if (funnel && mongoose.isValidObjectId(funnel)) where.productId = new mongoose.Types.ObjectId(funnel);
+    const offers = await Offer.find(where).sort({ order: 1 }).select('title price').lean();
     res.json({ offers });
   } catch (err) {
     next(err);

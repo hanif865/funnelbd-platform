@@ -1,9 +1,10 @@
+import mongoose from 'mongoose';
 import { Order, IncompleteOrder, DailyStat } from '../models/index.js';
 import { dhakaStartOf as startOf, dhakaYmd, DHAKA_TZ } from '../utils/time.js';
 
 /** Orders + revenue in [from, to). Revenue excludes cancelled/returned. */
-async function rangeStats(from, to) {
-  const match = { createdAt: { $gte: from, ...(to ? { $lt: to } : {}) } };
+async function rangeStats(from, to, base = {}) {
+  const match = { ...base, createdAt: { $gte: from, ...(to ? { $lt: to } : {}) } };
   const [agg] = await Order.aggregate([
     { $match: match },
     {
@@ -17,7 +18,19 @@ async function rangeStats(from, to) {
   return { orders: agg?.orders || 0, revenue: agg?.revenue || 0 };
 }
 
-/** GET /api/admin/dashboard → all the numbers the dashboard shows. */
+/** Sum a Map-or-object field across DailyStat docs into a plain object. */
+function sumMaps(docs, field) {
+  const out = {};
+  for (const d of docs) {
+    const m = d[field];
+    const obj = m instanceof Map ? Object.fromEntries(m) : (m || {});
+    for (const [k, v] of Object.entries(obj)) out[k] = (out[k] || 0) + (Number(v) || 0);
+  }
+  return out;
+}
+
+/** GET /api/admin/dashboard → all the numbers the dashboard shows.
+ *  ?funnel=<id> scopes everything to one funnel; omitted = all funnels. */
 export async function getDashboard(req, res, next) {
   try {
     const now = new Date();
@@ -26,60 +39,71 @@ export async function getDashboard(req, res, next) {
     const weekStart = startOf(6);
     const monthStart = startOf(29);
 
+    // Funnel scope (orders + stats). Empty = across all funnels.
+    const funnel = req.query.funnel;
+    const pid = funnel && mongoose.isValidObjectId(funnel) ? new mongoose.Types.ObjectId(funnel) : null;
+    const orderMatch = pid ? { productId: pid } : {};
+    const statMatch = pid ? { productId: pid } : {};
+
     const [today, yesterday, week, month] = await Promise.all([
-      rangeStats(todayStart, null),
-      rangeStats(yesterdayStart, todayStart),
-      rangeStats(weekStart, null),
-      rangeStats(monthStart, null),
+      rangeStats(todayStart, null, orderMatch),
+      rangeStats(yesterdayStart, todayStart, orderMatch),
+      rangeStats(weekStart, null, orderMatch),
+      rangeStats(monthStart, null, orderMatch),
     ]);
 
     const aov = month.orders ? Math.round(month.revenue / month.orders) : 0;
 
-    // Conversion: month orders ÷ month unique visitors.
+    // Conversion: month orders ÷ month unique visitors (summed across the scope).
     const monthDate = dhakaYmd(monthStart);
     const visitAgg = await DailyStat.aggregate([
-      { $match: { date: { $gte: monthDate } } },
+      { $match: { ...statMatch, date: { $gte: monthDate } } },
       { $group: { _id: null, visitors: { $sum: '$visitors' }, visits: { $sum: '$visits' } } },
     ]);
     const visitors = visitAgg[0]?.visitors || 0;
     const conversionRate = visitors ? +((month.orders / visitors) * 100).toFixed(1) : null;
 
     // Today at a glance: unique visitors, visits and interaction clicks
-    // (call / whatsapp / order-button) from today's DailyStat doc.
+    // (call / whatsapp / order-button), summed across the scope's docs for today.
     const todayKey = dhakaYmd();
-    const todayStat = await DailyStat.findOne({ date: todayKey }).lean();
-    const mapGet = (m, k) => (m instanceof Map ? m.get(k) : m?.[k]) || 0;
+    const todayStats = await DailyStat.find({ ...statMatch, date: todayKey }).lean();
+    const todayVisits = todayStats.reduce((s, d) => s + (d.visits || 0), 0);
+    const todayVisitors = todayStats.reduce((s, d) => s + (d.visitors || 0), 0);
+    const todayEvents = sumMaps(todayStats, 'events');
     const todayDetail = {
-      visitors: todayStat?.visitors || 0,
-      visits: todayStat?.visits || 0,
+      visitors: todayVisitors,
+      visits: todayVisits,
       orders: today.orders,
       revenue: today.revenue,
-      calls: mapGet(todayStat?.events, 'call'),
-      whatsapp: mapGet(todayStat?.events, 'whatsapp'),
-      orderClicks: mapGet(todayStat?.events, 'order_click'),
+      calls: todayEvents.call || 0,
+      whatsapp: todayEvents.whatsapp || 0,
+      orderClicks: todayEvents.order_click || 0,
     };
 
-    // Incomplete + recovery.
+    // Incomplete + recovery (scoped).
     const [incompleteActive, incompleteConverted, incompleteTotal] = await Promise.all([
-      IncompleteOrder.countDocuments({ status: { $in: ['new', 'called'] } }),
-      IncompleteOrder.countDocuments({ status: 'converted' }),
-      IncompleteOrder.countDocuments({}),
+      IncompleteOrder.countDocuments({ ...orderMatch, status: { $in: ['new', 'called'] } }),
+      IncompleteOrder.countDocuments({ ...orderMatch, status: 'converted' }),
+      IncompleteOrder.countDocuments({ ...orderMatch }),
     ]);
     const recoveryRate = incompleteTotal ? +((incompleteConverted / incompleteTotal) * 100).toFixed(1) : null;
 
     // Source breakdown (month).
     const sources = await Order.aggregate([
-      { $match: { createdAt: { $gte: monthStart } } },
+      { $match: { ...orderMatch, createdAt: { $gte: monthStart } } },
       { $group: { _id: '$source', count: { $sum: 1 }, revenue: { $sum: '$total' } } },
       { $sort: { count: -1 } },
     ]);
 
-    // Status pipeline counts (all-time).
-    const statusAgg = await Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
+    // Status pipeline counts (all-time, scoped).
+    const statusAgg = await Order.aggregate([
+      { $match: orderMatch },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]);
 
     // 30-day daily series (orders + revenue).
     const daily = await Order.aggregate([
-      { $match: { createdAt: { $gte: monthStart } } },
+      { $match: { ...orderMatch, createdAt: { $gte: monthStart } } },
       {
         $group: {
           _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: DHAKA_TZ } },
@@ -97,10 +121,10 @@ export async function getDashboard(req, res, next) {
       series.push({ date: key, orders: found?.orders || 0, revenue: found?.revenue || 0 });
     }
 
-    const recent = await Order.find().sort({ createdAt: -1 }).limit(10)
+    const recent = await Order.find(orderMatch).sort({ createdAt: -1 }).limit(10)
       .select('orderNumber customer.name customer.phone total status source createdAt').lean();
 
-    // Section dwell time & exit drop-off analytics (30-day aggregate).
+    // Section dwell time & exit drop-off analytics (30-day aggregate, scoped).
     const SECTION_LABELS = {
       checkout: 'Checkout form & packages',
       hero_showcase: 'Product gallery & showcase',
@@ -114,45 +138,19 @@ export async function getDashboard(req, res, next) {
       footer: 'Footer & helpline',
     };
 
-    const sectionStats = await DailyStat.find({ date: { $gte: monthDate } }).lean();
-    const sectionDwellAgg = {};
-    const sectionExitsAgg = {};
-    const sectionViewsAgg = {};
-
-    for (const stat of sectionStats) {
-      if (stat.sectionDwell) {
-        const obj = stat.sectionDwell instanceof Map ? Object.fromEntries(stat.sectionDwell) : stat.sectionDwell;
-        for (const [k, v] of Object.entries(obj || {})) {
-          sectionDwellAgg[k] = (sectionDwellAgg[k] || 0) + (Number(v) || 0);
-        }
-      }
-      if (stat.sectionExits) {
-        const obj = stat.sectionExits instanceof Map ? Object.fromEntries(stat.sectionExits) : stat.sectionExits;
-        for (const [k, v] of Object.entries(obj || {})) {
-          sectionExitsAgg[k] = (sectionExitsAgg[k] || 0) + (Number(v) || 0);
-        }
-      }
-      if (stat.sectionViews) {
-        const obj = stat.sectionViews instanceof Map ? Object.fromEntries(stat.sectionViews) : stat.sectionViews;
-        for (const [k, v] of Object.entries(obj || {})) {
-          sectionViewsAgg[k] = (sectionViewsAgg[k] || 0) + (Number(v) || 0);
-        }
-      }
-    }
+    const sectionStats = await DailyStat.find({ ...statMatch, date: { $gte: monthDate } }).lean();
+    const sectionDwellAgg = sumMaps(sectionStats, 'sectionDwell');
+    const sectionExitsAgg = sumMaps(sectionStats, 'sectionExits');
+    const sectionViewsAgg = sumMaps(sectionStats, 'sectionViews');
 
     const allKeys = new Set([...Object.keys(SECTION_LABELS), ...Object.keys(sectionDwellAgg), ...Object.keys(sectionExitsAgg)]);
-    const sectionAnalytics = Array.from(allKeys).map((key) => {
-      const dwellSeconds = sectionDwellAgg[key] || 0;
-      const exits = sectionExitsAgg[key] || 0;
-      const views = sectionViewsAgg[key] || 0;
-      return {
-        key,
-        label: SECTION_LABELS[key] || key,
-        dwellSeconds,
-        exits,
-        views,
-      };
-    }).sort((a, b) => b.dwellSeconds - a.dwellSeconds);
+    const sectionAnalytics = Array.from(allKeys).map((key) => ({
+      key,
+      label: SECTION_LABELS[key] || key,
+      dwellSeconds: sectionDwellAgg[key] || 0,
+      exits: sectionExitsAgg[key] || 0,
+      views: sectionViewsAgg[key] || 0,
+    })).sort((a, b) => b.dwellSeconds - a.dwellSeconds);
 
     res.json({
       cards: { today, yesterday, week, month, aov, conversionRate, visitors },

@@ -116,6 +116,8 @@ textarea { resize: vertical; }
 .funnel-switch select { border: none; background: transparent; font-weight: 600; font-size: .86rem; color: var(--ink); cursor: pointer; max-width: 220px; }
 .funnel-switch select:focus { outline: none; }
 .offer-admin.is-selected { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-50); }
+.funnel-filter { padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; font-weight: 600; font-size: .85rem; color: var(--ink); cursor: pointer; max-width: 220px; }
+.funnel-filter:focus { outline: none; border-color: var(--brand); }
 .user { display: flex; align-items: center; gap: 12px; }
 .avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--brand-50); color: var(--brand); display: grid; place-items: center; font-weight: 700; font-size: .85rem; }
 .user-meta { line-height: 1.2; }

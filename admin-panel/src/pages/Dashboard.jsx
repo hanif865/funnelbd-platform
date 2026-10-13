@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { fmtDate, money, num } from '../constants.js';
 import { Pill, StatusPill, Empty } from '../components/ui.jsx';
+import { FunnelFilter } from '../funnel.jsx';
 
 const orders = (n) => `${num(n)} ${Number(n) === 1 ? 'order' : 'orders'}`;
 
@@ -16,7 +17,11 @@ function formatDwell(sec) {
 export default function Dashboard() {
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
-  useEffect(() => { api('/dashboard').then(setD).catch((e) => setErr(e.message)); }, []);
+  const [funnel, setFunnel] = useState('');
+  useEffect(() => {
+    setErr('');
+    api('/dashboard', { params: { funnel } }).then(setD).catch((e) => setErr(e.message));
+  }, [funnel]);
 
   if (err) return <p className="err">{err}</p>;
   if (!d) return <p className="muted">Loading…</p>;
@@ -33,6 +38,7 @@ export default function Dashboard() {
           <h1>Dashboard</h1>
           <p className="page-sub">Sales, conversion and where visitors drop off.</p>
         </div>
+        <FunnelFilter value={funnel} onChange={setFunnel} />
       </div>
 
       {td && (
