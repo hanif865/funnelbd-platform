@@ -23,6 +23,7 @@ const NAV = [
       { to: '/form-builder', label: 'Checkout form', icon: 'form', adminOnly: true },
       { to: '/delivery', label: 'Delivery', icon: 'truck', adminOnly: true },
       { to: '/page-editor', label: 'Landing page', icon: 'layout', adminOnly: true },
+      { to: '/domains', label: 'Domains', icon: 'globe', adminOnly: true },
     ],
   },
   {

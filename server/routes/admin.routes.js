@@ -65,6 +65,14 @@ import {
   updateFunnel,
   deleteFunnel,
 } from '../controllers/funnel.controller.js';
+import {
+  listDomains,
+  addDomain,
+  verifyDomain,
+  domainTlsStatus,
+  setPrimaryDomain,
+  deleteDomain,
+} from '../controllers/domain.controller.js';
 import { handleUpload } from '../controllers/upload.controller.js';
 import { signup, checkSubdomain } from '../controllers/signup.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
@@ -124,6 +132,14 @@ router.post('/funnels', requireAdmin, requireRole('admin'), createFunnel);
 router.post('/funnels/:id/clone', requireAdmin, requireRole('admin'), cloneFunnel);
 router.put('/funnels/:id', requireAdmin, requireRole('admin'), updateFunnel);
 router.delete('/funnels/:id', requireAdmin, requireRole('admin'), deleteFunnel);
+
+// ── Custom domains (admin-only) ──────────────────────
+router.get('/domains', requireAdmin, requireRole('admin'), listDomains);
+router.post('/domains', requireAdmin, requireRole('admin'), addDomain);
+router.post('/domains/:id/verify', requireAdmin, requireRole('admin'), verifyDomain);
+router.get('/domains/:id/tls', requireAdmin, requireRole('admin'), domainTlsStatus);
+router.post('/domains/:id/primary', requireAdmin, requireRole('admin'), setPrimaryDomain);
+router.delete('/domains/:id', requireAdmin, requireRole('admin'), deleteDomain);
 
 // ── Product & Offers ─────────────────────────────────
 router.get('/product', requireAdmin, getProduct);

@@ -44,6 +44,12 @@ export const config = {
   baseUrl: (process.env.BASE_URL || 'http://localhost:3000').replace(/\/$/, ''),
   // Root domain for free tenant subdomains (<account-slug>.<appDomain>).
   appDomain: (process.env.APP_DOMAIN || 'funnelbd.com').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase().trim(),
+  // Cloudflare for SaaS (optional) — provisions TLS for tenant custom domains.
+  // When unset, custom domains still work at DNS level; TLS is handled elsewhere.
+  cloudflare: {
+    apiToken: (process.env.CF_API_TOKEN || '').trim(),
+    zoneId: (process.env.CF_ZONE_ID || '').trim(),
+  },
 
   mongoUri: required('MONGODB_URI'),
 

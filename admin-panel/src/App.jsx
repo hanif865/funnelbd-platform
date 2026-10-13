@@ -4,6 +4,7 @@ import { FunnelProvider } from './funnel.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Funnels from './pages/Funnels.jsx';
+import Domains from './pages/Domains.jsx';
 import Orders from './pages/Orders.jsx';
 import OrderDetail from './pages/OrderDetail.jsx';
 import Tracking from './pages/Tracking.jsx';
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/orders" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/funnels" element={<Funnels />} />
+        <Route path="/domains" element={<Domains />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/incomplete" element={<Incomplete />} />

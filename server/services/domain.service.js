@@ -1,4 +1,22 @@
+import dns from 'node:dns/promises';
 import { Domain, Account } from '../models/index.js';
+
+// Ownership check resolver (swappable in tests via __setTxtResolver).
+let txtResolver = (name) => dns.resolveTxt(name);
+export function __setTxtResolver(fn) { txtResolver = fn; }
+
+export const CHALLENGE_PREFIX = '_funnelbd-challenge';
+
+/** True when the domain's challenge TXT record contains the expected token. */
+export async function verifyTxtOwnership(host, token) {
+  if (!host || !token) return false;
+  try {
+    const records = await txtResolver(`${CHALLENGE_PREFIX}.${host}`);
+    return (records || []).flat().some((r) => String(r).includes(token));
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Resolve the tenant that owns an incoming public request from its Host header.
@@ -28,7 +46,8 @@ export async function resolveAccountId(host) {
 
   let accountId = null;
   if (h) {
-    const dom = await Domain.findOne({ host: h }).select('accountId').lean();
+    // Only a verified domain routes traffic (a subdomain is verified on signup).
+    const dom = await Domain.findOne({ host: h, verified: true }).select('accountId').lean();
     accountId = dom ? dom.accountId : await soleAccountId();
   } else {
     accountId = await soleAccountId();
@@ -51,4 +70,4 @@ export function invalidateDomainCache() {
   cache = new Map();
 }
 
-export default { resolveAccountId, resolvePublicAccount, invalidateDomainCache };
+export default { resolveAccountId, resolvePublicAccount, invalidateDomainCache, verifyTxtOwnership, CHALLENGE_PREFIX };
