@@ -1,7 +1,7 @@
 // SaaS Phase S3a: the public path resolves the tenant from the Host header and
 // never serves or accepts another account's catalog.
 import { callController as call, makeT } from './_harness.mjs';
-import { Account, Domain, FormField, DeliveryZone, Offer, Order } from '../server/models/index.js';
+import { Account, Domain, Product, FormField, DeliveryZone, Offer, Order } from '../server/models/index.js';
 import * as funnel from '../server/controllers/funnel.controller.js';
 import { getCatalog, invalidateCatalogCache } from '../server/services/catalog.cache.js';
 import { resolveAccountId, invalidateDomainCache } from '../server/services/domain.service.js';
@@ -48,6 +48,14 @@ export default {
     ok(!cat.product, 'getCatalog(B, slugA) → nothing (B has no such slug)');
     cat = await getCatalog(A._id, null);
     ok(cat.product && String(cat.product.accountId) === String(A._id), 'getCatalog(A) default → A product');
+
+    // A deactivated funnel must NOT be served (by slug or as default).
+    await Product.updateOne({ _id: fA._id }, { $set: { active: false } });
+    invalidateCatalogCache();
+    cat = await getCatalog(A._id, fA.slug);
+    ok(!cat.product, 'deactivated funnel is not served by slug');
+    await Product.updateOne({ _id: fA._id }, { $set: { active: true } });
+    invalidateCatalogCache();
 
     // Valid checkout on A.
     const order = await createOrder(

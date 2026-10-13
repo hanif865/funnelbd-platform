@@ -158,6 +158,9 @@ export async function renderLanding(req, res, next) {
  */
 export async function submitCheckout(req, res, next) {
   try {
+    if (req.publicAccountSuspended) {
+      return res.status(503).json({ ok: false, errors: { _: 'এই স্টোরটি এখন উপলব্ধ নয়।' } });
+    }
     const parsed = checkoutSchema.safeParse(req.body);
     if (!parsed.success) {
       const errors = {};

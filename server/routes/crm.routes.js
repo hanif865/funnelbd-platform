@@ -1,8 +1,26 @@
 import { Router } from 'express';
 import crypto from 'node:crypto';
 import { config } from '../config/index.js';
-import { Order, IncompleteOrder, Offer } from '../models/index.js';
+import { Order, IncompleteOrder, Offer, Account } from '../models/index.js';
 import { getSetting, setSetting } from '../services/settings.service.js';
+
+// The CRM feed is platform-level (one operator secret) and, for now, serves
+// only the operator's own account — the first/default account — so a tenant's
+// orders are never exposed to the operator's external CRM. Per-account CRM
+// (each tenant with its own secret + feed) is a later phase. Cached briefly.
+let _crmAcct = { id: undefined, at: 0 };
+async function crmAccountId() {
+  if (_crmAcct.id !== undefined && Date.now() - _crmAcct.at < 60000) return _crmAcct.id;
+  const a = await Account.findOne().sort({ createdAt: 1 }).select('_id').lean();
+  _crmAcct = { id: a ? a._id : null, at: Date.now() };
+  return _crmAcct.id;
+}
+/** Add the CRM account scope to a query (no-op pre-migration when null). */
+async function scopeCrm(q = {}) {
+  const id = await crmAccountId();
+  if (id) q.accountId = id;
+  return q;
+}
 
 /**
  * SafeCommerce CRM ingest feed, matching the dizara-order-sync-api WooCommerce
@@ -115,10 +133,10 @@ router.get('/orders', requireSecret, async (req, res, next) => {
       sort = { orderNumber: -1 }; // newest first
     }
 
-    const rows = await Order.find(q).sort(sort).skip(offset).limit(limit).lean();
+    const rows = await Order.find(await scopeCrm(q)).sort(sort).skip(offset).limit(limit).lean();
 
     const offerMap = Object.fromEntries(
-      (await Offer.find().select('sku quantity').lean()).map((o) => [String(o._id), { sku: o.sku || '', quantity: o.quantity || 1 }])
+      (await Offer.find(await scopeCrm({})).select('sku quantity').lean()).map((o) => [String(o._id), { sku: o.sku || '', quantity: o.quantity || 1 }])
     );
 
     const orders = rows.map((o) => {
@@ -182,13 +200,13 @@ router.get('/incomplete-orders', requireSecret, async (req, res, next) => {
     }
 
     const since = effectiveSince(req.query.since, startedAt);
-    const rows = await IncompleteOrder.find({
+    const rows = await IncompleteOrder.find(await scopeCrm({
       status: { $in: ['new', 'called'] },
       phoneValid: true,
       firstSeenAt: { $gt: since },
       'data.name': { $nin: [null, ''] },
       'data.address': { $nin: [null, ''] },
-    })
+    }))
       .sort({ _id: -1 })
       .skip(offset)
       .limit(limit)
@@ -230,7 +248,7 @@ router.get('/products', requireSecret, async (req, res, next) => {
     const q = { active: true };
     if (since) q.updatedAt = { $gt: since };
 
-    const rows = await Offer.find(q).sort({ _id: -1 }).skip(offset).limit(limit).lean();
+    const rows = await Offer.find(await scopeCrm(q)).sort({ _id: -1 }).skip(offset).limit(limit).lean();
 
     const products = rows.map((p) => ({
       product_id: String(p._id),
@@ -268,7 +286,7 @@ router.post('/order-update', async (req, res, next) => {
     const num_ = Number(p.order_id);
     if (!num_) return res.status(400).json({ success: false, message: 'order_id is required' });
 
-    const order = await Order.findOne({ orderNumber: num_ });
+    const order = await Order.findOne(await scopeCrm({ orderNumber: num_ }));
     if (!order) return res.status(404).json({ success: false, message: 'order not found' });
 
     const updated = [];
@@ -311,7 +329,7 @@ router.post('/order-sync', async (req, res, next) => {
     const p = req.body || {};
     if (!secretOk(p.secret)) return res.status(401).json({ success: false, message: 'Unauthorized' });
     const num_ = Number(p.order_id);
-    const order = num_ ? await Order.findOne({ orderNumber: num_ }) : null;
+    const order = num_ ? await Order.findOne(await scopeCrm({ orderNumber: num_ })) : null;
     if (!order) return res.status(404).json({ success: false, message: 'order not found' });
 
     // rev is the CRM's send time in ms; drop anything older than what we've applied.

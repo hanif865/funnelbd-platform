@@ -21,9 +21,10 @@ let generation = 0;
 const cacheKey = (accountId, slug) => `${accountId ? String(accountId) : 'null'}|${slug || '__default__'}`;
 
 async function load(accountId, slug) {
-  const where = { accountId: accountId || null };
+  // Always require active: a deactivated funnel must not be served, by slug or
+  // as the default. (slug is unique per account so sort is only for the default.)
+  const where = { accountId: accountId || null, active: true };
   if (slug) where.slug = slug;
-  else where.active = true;
   const product = await Product.findOne(where).sort({ createdAt: 1 }).lean();
   if (!product) return deepFreeze({ product: null, offers: [], fields: [], zones: [] });
 
