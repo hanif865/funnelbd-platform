@@ -19,6 +19,7 @@
     "analytics:reset": "node server/scripts/reset-section-analytics.js",
     "funnel:migrate": "node server/scripts/assign-default-funnel.js",
     "saas:migrate": "node server/scripts/saas-migrate.js",
+    "superadmin:create": "node server/scripts/create-superadmin.js",
     "images:optimize": "node server/scripts/optimize-images.js",
     "images:variants": "node server/scripts/regenerate-image-variants.js",
     "admin:dev": "npm --prefix admin-panel run dev",

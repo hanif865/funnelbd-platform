@@ -6,7 +6,7 @@ import { provisionStarterFunnel } from '../services/provision.service.js';
 import { invalidateDomainCache } from '../services/domain.service.js';
 
 // Subdomains we never hand to tenants.
-const RESERVED = new Set(['www', 'admin', 'api', 'app', 'mail', 'ftp', 'cdn', 'static', 'assets', 'dashboard', 'support', 'help', 'status', 'blog', 'dev', 'staging', 'test']);
+const RESERVED = new Set(['www', 'admin', 'api', 'app', 'mail', 'ftp', 'cdn', 'static', 'assets', 'dashboard', 'support', 'help', 'status', 'blog', 'dev', 'staging', 'test', 'funnel', 'funnels', 'checkout', 'shop', 'store', 'account', 'auth', 'login', 'signup']);
 
 function slugify(s) {
   return String(s || '')
