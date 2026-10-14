@@ -81,6 +81,12 @@ import {
 import { handleUpload } from '../controllers/upload.controller.js';
 import { signup, checkSubdomain } from '../controllers/signup.controller.js';
 import { aiStatus, generateLanding } from '../controllers/ai.controller.js';
+import {
+  getMetaSettings,
+  updateMetaSettings,
+  listCampaigns as listMetaCampaigns,
+  setCampaignStatus as setMetaCampaignStatus,
+} from '../controllers/meta.controller.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 import { invalidateCatalogCache } from '../services/catalog.cache.js';
 import { invalidateSettingsCache } from '../services/settings.service.js';
@@ -147,6 +153,12 @@ router.patch('/superadmin/accounts/:id/status', requireAdmin, requireRole('super
 // ── AI copy generation (admin-only) ──────────────────
 router.get('/ai/status', requireAdmin, aiStatus);
 router.post('/ai/landing', requireAdmin, requireRole('admin'), rateLimit({ windowMs: 60 * 1000, max: 10, message: 'Too many AI requests — wait a moment.' }), generateLanding);
+
+// ── Meta Ads (per-tenant, admin-only) ────────────────
+router.get('/meta', requireAdmin, requireRole('admin'), getMetaSettings);
+router.put('/meta', requireAdmin, requireRole('admin'), updateMetaSettings);
+router.get('/meta/campaigns', requireAdmin, requireRole('admin'), listMetaCampaigns);
+router.patch('/meta/campaigns/:id/status', requireAdmin, requireRole('admin'), setMetaCampaignStatus);
 
 // ── Custom domains (admin-only) ──────────────────────
 router.get('/domains', requireAdmin, requireRole('admin'), listDomains);

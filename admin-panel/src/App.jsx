@@ -5,6 +5,7 @@ import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
 import Funnels from './pages/Funnels.jsx';
 import Domains from './pages/Domains.jsx';
+import MetaAds from './pages/MetaAds.jsx';
 import Accounts from './pages/Accounts.jsx';
 import Orders from './pages/Orders.jsx';
 import OrderDetail from './pages/OrderDetail.jsx';
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/form-builder" element={<FormBuilder />} />
         <Route path="/delivery" element={<Delivery />} />
         <Route path="/page-editor" element={<PageEditor />} />
+        <Route path="/meta-ads" element={<MetaAds />} />
         <Route path="/tracking" element={<Tracking />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/system" element={<System />} />

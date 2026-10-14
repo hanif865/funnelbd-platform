@@ -30,6 +30,7 @@ const NAV = [
   {
     section: 'System',
     items: [
+      { to: '/meta-ads', label: 'Meta Ads', icon: 'megaphone', adminOnly: true },
       { to: '/tracking', label: 'Tracking', icon: 'chart', adminOnly: true },
       { to: '/settings', label: 'Settings', icon: 'settings', adminOnly: true },
       { to: '/system', label: 'System status', icon: 'pulse', badge: 'errors' },
