@@ -2110,3 +2110,54 @@ a {
   #orderForm .wcf-product-option-wrap { padding-top: 10px !important; }
   #orderForm .woocommerce-checkout-review-order-table th { text-align: left !important; font-weight: 600 !important; }
 }
+
+/* ==========================================================================
+   Prebuilt landing templates (visual themes). Body carries .fk-theme-<key>.
+   "classic" uses the :root defaults; the rest re-tint the design tokens so a
+   funnel can switch its whole look from one dropdown. Keys match
+   server/config/templates.js and the admin LANDING_TEMPLATES list.
+   ========================================================================== */
+.fk-theme-emerald {
+  --fk-primary: #059669; --fk-primary-rgb: 5, 150, 105;
+  --fk-btn-green: #10b981; --fk-btn-green-rgb: 16, 185, 129; --fk-dark-green: #047857;
+}
+.fk-theme-royal {
+  --fk-primary: #7c3aed; --fk-primary-rgb: 124, 58, 237;
+  --fk-btn-green: #f59e0b; --fk-btn-green-rgb: 245, 158, 11; --fk-dark-green: #b45309;
+  --fk-surface-alt: #faf5ff;
+}
+.fk-theme-sunset {
+  --fk-primary: #ea580c; --fk-primary-rgb: 234, 88, 12;
+  --fk-btn-green: #16a34a; --fk-btn-green-rgb: 22, 163, 74; --fk-dark-green: #15803d;
+  --fk-surface-alt: #fff7ed;
+}
+.fk-theme-ocean {
+  --fk-primary: #0284c7; --fk-primary-rgb: 2, 132, 199;
+  --fk-btn-green: #06b6d4; --fk-btn-green-rgb: 6, 182, 212; --fk-dark-green: #0e7490;
+  --fk-surface-alt: #f0f9ff;
+}
+.fk-theme-rose {
+  --fk-primary: #e11d48; --fk-primary-rgb: 225, 29, 72;
+  --fk-btn-green: #db2777; --fk-btn-green-rgb: 219, 39, 119; --fk-dark-green: #9d174d;
+  --fk-surface-alt: #fff1f2;
+}
+.fk-theme-gold {
+  --fk-primary: #111827; --fk-primary-rgb: 17, 24, 39;
+  --fk-btn-green: #d4af37; --fk-btn-green-rgb: 212, 175, 55; --fk-dark-green: #a67c0a;
+  --fk-surface-alt: #faf7ef;
+}
+.fk-theme-teal {
+  --fk-primary: #0d9488; --fk-primary-rgb: 13, 148, 136;
+  --fk-btn-green: #f97316; --fk-btn-green-rgb: 249, 115, 22; --fk-dark-green: #c2410c;
+  --fk-surface-alt: #f0fdfa;
+}
+.fk-theme-berry {
+  --fk-primary: #a21caf; --fk-primary-rgb: 162, 28, 175;
+  --fk-btn-green: #22c55e; --fk-btn-green-rgb: 34, 197, 94; --fk-dark-green: #15803d;
+  --fk-surface-alt: #fdf4ff;
+}
+.fk-theme-midnight {
+  --fk-primary: #4338ca; --fk-primary-rgb: 67, 56, 202;
+  --fk-btn-green: #22c55e; --fk-btn-green-rgb: 34, 197, 94; --fk-dark-green: #15803d;
+  --fk-surface-alt: #eef2ff;
+}

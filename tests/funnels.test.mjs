@@ -62,6 +62,12 @@ export default {
     const cat0 = await getCatalog(null, null);
     ok(String(cat0.product._id) === String(def._id), 'default landing unchanged');
 
+    // landing template (visual theme) persists; unknown keys are ignored.
+    r = await call(catalog.updateProduct, { query: { funnel: String(f2._id) }, body: { template: 'ocean' } });
+    ok(r.body.product.template === 'ocean', 'valid template saved');
+    r = await call(catalog.updateProduct, { query: { funnel: String(f2._id) }, body: { template: 'bogus-theme' } });
+    ok(r.body.product.template === 'ocean', 'unknown template ignored (kept ocean)');
+
     // delete guards
     r = await call(funnel.deleteFunnel, { params: { id: String(f3._id) } });
     ok(r.status === 200 && !(await Product.findById(f3._id)), 'f3 deleted');

@@ -19,7 +19,7 @@
   <% } %>
   <% if (product.images && product.images[0]) { %><link rel="preload" as="image" href="<%= product.images[0] %>" fetchpriority="high" /><% } %>
 </head>
-<body class="khaleshaat-theme">
+<body class="khaleshaat-theme fk-theme-<%= (product.template || 'classic') %>">
   <%
     const storeInfo = (settings && settings.storeInfo) || {};
     const hasImages = product.images && product.images.length;

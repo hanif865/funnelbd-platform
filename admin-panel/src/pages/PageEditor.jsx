@@ -5,6 +5,7 @@ import { useFunnelApi, useFunnel } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import ImageUploader from '../components/ImageUploader.jsx';
+import { LANDING_TEMPLATES } from '../constants.js';
 
 async function uploadImage(file) {
   const fd = new FormData();
@@ -117,6 +118,7 @@ export default function PageEditor() {
           description: p.description,
           images: p.images,
           content: p.content,
+          template: p.template || 'classic',
         },
       });
       setMsg('Published — the change is live on the page.');
@@ -149,6 +151,34 @@ export default function PageEditor() {
       </div>
 
       {aiOpen && <AiModal initialName={p.name} onClose={() => setAiOpen(false)} onApply={applyAi} />}
+
+      {/* ── 0. Template (visual theme) ── */}
+      <div className="card">
+        <h3>Template</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
+          Pick a visual theme for this funnel’s landing page. It changes the colours and button style; your content stays the same.
+        </p>
+        <div className="template-grid">
+          {LANDING_TEMPLATES.map((tpl) => {
+            const active = (p.template || 'classic') === tpl.key;
+            return (
+              <button
+                type="button"
+                key={tpl.key}
+                className={'template-swatch' + (active ? ' is-active' : '')}
+                onClick={() => setP({ ...p, template: tpl.key })}
+                title={tpl.label}
+              >
+                <span className="template-preview">
+                  <span className="template-bar" style={{ background: tpl.primary }} />
+                  <span className="template-btn" style={{ background: tpl.button }} />
+                </span>
+                <span className="template-name">{tpl.label}{active && ' ✓'}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* ── 1. Brand & top bar ── */}
       <div className="card">

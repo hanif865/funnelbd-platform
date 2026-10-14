@@ -50,3 +50,18 @@ export function money(n) {
 export function fieldLabel(order, key) {
   return order?.customFieldLabels?.[key] || (key === 'size' ? 'Size' : key === 'color' ? 'Color' : key);
 }
+
+/** Prebuilt landing templates (visual themes). Keys match the server's
+ *  TEMPLATE_KEYS and the .fk-theme-<key> blocks in public/css/landing.css. */
+export const LANDING_TEMPLATES = [
+  { key: 'classic',  label: 'Classic',  primary: '#e0142b', button: '#05bd02' },
+  { key: 'emerald',  label: 'Emerald',  primary: '#059669', button: '#10b981' },
+  { key: 'royal',    label: 'Royal',    primary: '#7c3aed', button: '#f59e0b' },
+  { key: 'sunset',   label: 'Sunset',   primary: '#ea580c', button: '#16a34a' },
+  { key: 'ocean',    label: 'Ocean',    primary: '#0284c7', button: '#06b6d4' },
+  { key: 'rose',     label: 'Rose',     primary: '#e11d48', button: '#db2777' },
+  { key: 'gold',     label: 'Gold',     primary: '#111827', button: '#d4af37' },
+  { key: 'teal',     label: 'Teal',     primary: '#0d9488', button: '#f97316' },
+  { key: 'berry',    label: 'Berry',    primary: '#a21caf', button: '#22c55e' },
+  { key: 'midnight', label: 'Midnight', primary: '#4338ca', button: '#22c55e' },
+];

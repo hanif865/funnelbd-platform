@@ -6,6 +6,7 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true }, // hero headline
     // Slug is unique within an account (two tenants may both use "checkout").
     slug: { type: String, required: true, trim: true, lowercase: true },
+    template: { type: String, default: 'classic' }, // landing visual theme key
     description: { type: String, default: '' }, // benefit rich text (HTML)
     images: { type: [String], default: [] }, // hero gallery
     // Landing-page content editable from the admin Page Editor.
