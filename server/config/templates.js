@@ -16,4 +16,22 @@ export function isTemplate(key) {
   return TEMPLATE_KEYS.includes(key);
 }
 
-export default { TEMPLATE_KEYS, DEFAULT_TEMPLATE, isTemplate };
+/**
+ * Layouts are distinct landing-page DESIGNS (different structure), independent
+ * of the colour template. Each maps to an EJS view: 'classic' → views/landing.ejs,
+ * others → views/landing-<key>.ejs. All reuse the shared checkout + gallery
+ * partials so the order form and tracking keep working in every design.
+ */
+export const LAYOUT_KEYS = ['classic', 'spotlight'];
+export const DEFAULT_LAYOUT = 'classic';
+
+export function isLayout(key) {
+  return LAYOUT_KEYS.includes(key);
+}
+
+/** The EJS view name for a layout key. */
+export function layoutView(key) {
+  return isLayout(key) && key !== 'classic' ? `landing-${key}` : 'landing';
+}
+
+export default { TEMPLATE_KEYS, DEFAULT_TEMPLATE, isTemplate, LAYOUT_KEYS, DEFAULT_LAYOUT, isLayout, layoutView };

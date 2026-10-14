@@ -5,7 +5,7 @@ import { useFunnelApi, useFunnel } from '../funnel.jsx';
 import { Notice } from '../components/ui.jsx';
 import Icon from '../components/Icon.jsx';
 import ImageUploader from '../components/ImageUploader.jsx';
-import { LANDING_TEMPLATES } from '../constants.js';
+import { LANDING_TEMPLATES, LANDING_LAYOUTS } from '../constants.js';
 
 async function uploadImage(file) {
   const fd = new FormData();
@@ -119,6 +119,7 @@ export default function PageEditor() {
           images: p.images,
           content: p.content,
           template: p.template || 'classic',
+          layout: p.layout || 'classic',
         },
       });
       setMsg('Published — the change is live on the page.');
@@ -152,9 +153,31 @@ export default function PageEditor() {
 
       {aiOpen && <AiModal initialName={p.name} onClose={() => setAiOpen(false)} onApply={applyAi} />}
 
-      {/* ── 0. Template (visual theme) ── */}
+      {/* ── 0. Design (layout) ── */}
       <div className="card">
-        <h3>Template</h3>
+        <h3>Design</h3>
+        <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
+          Choose how the landing page is laid out. All designs use the same offers, form and tracking.
+        </p>
+        <div className="design-grid">
+          {LANDING_LAYOUTS.map((lay) => {
+            const active = (p.layout || 'classic') === lay.key;
+            return (
+              <button type="button" key={lay.key} className={'design-card' + (active ? ' is-active' : '')} onClick={() => setP({ ...p, layout: lay.key })}>
+                <span className={'design-mini design-mini-' + lay.key} aria-hidden="true">
+                  <span className="dm-a" /><span className="dm-b" /><span className="dm-c" />
+                </span>
+                <b>{lay.label}{active && ' ✓'}</b>
+                <span className="muted" style={{ fontSize: '.8rem' }}>{lay.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── 0b. Template (colour theme) ── */}
+      <div className="card">
+        <h3>Colour theme</h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
           Pick a visual theme for this funnel’s landing page. It changes the colours and button style; your content stays the same.
         </p>

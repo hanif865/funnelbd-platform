@@ -7,7 +7,7 @@ import {
   FIELD_TYPES,
 } from '../models/index.js';
 import { getDefaultProductId } from '../services/catalog.cache.js';
-import { isTemplate } from '../config/templates.js';
+import { isTemplate, isLayout } from '../config/templates.js';
 
 // The tenant this request belongs to (set by auth middleware), as an ObjectId.
 function acct(req) {
@@ -66,6 +66,7 @@ export async function updateProduct(req, res, next) {
     if (Array.isArray(b.images)) product.images = b.images;
     if (b.active !== undefined) product.active = !!b.active;
     if (b.template !== undefined && isTemplate(b.template)) product.template = b.template;
+    if (b.layout !== undefined && isLayout(b.layout)) product.layout = b.layout;
     if (b.content && typeof b.content === 'object') {
       product.content = { ...product.content?.toObject?.() ?? product.content, ...b.content };
     }

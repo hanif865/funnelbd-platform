@@ -1,0 +1,250 @@
+<%
+  const storeInfo = (settings && settings.storeInfo) || {};
+  const hasImages = product.images && product.images.length;
+  const c = product.content || {};
+  const reviewImages = c.reviewImages || [];
+  const firstOffer = offers[0] || {};
+  const toBn = (n) => String(n == null ? '' : n).replace(/d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+  const contactAt = (i) => (storePhones.length ? storePhones[i % storePhones.length] : null);
+  const srcsetAttr = (src, sizes) => { const ss = typeof imgSrcset === 'function' ? imgSrcset(src) : ''; return ss ? ` srcset="${ss}" sizes="${sizes}"` : ''; };
+%>
+  <section class="fk-checkout-section" id="checkout" data-section="checkout">
+    <div class="fk-container fk-checkout-container">
+      
+      <!-- Section Header -->
+      <div class="text-center fk-checkout-header">
+        <% if (c.checkoutBadge) { %>
+          <span class="section-pill-badge fk-badge-primary">
+            <i class="fa-solid fa-bolt"></i> <%= c.checkoutBadge %>
+          </span>
+        <% } %>
+        <h2 class="fk-heading fk-checkout-main-title">
+          <%= c.checkoutTitle || 'অর্ডার কনফার্ম করতে নিচের ফর্মটি পূরণ করুন' %><% if (c.sizeChartImage) { %> <span class="hide-mobile">(সাইজ চার্ট নিচে দেখুন)</span><% } %>
+        </h2>
+        <% if (c.checkoutSubtitle) { %>
+          <p class="fk-checkout-subtitle hide-mobile">
+            <%= c.checkoutSubtitle %>
+          </p>
+        <% } %>
+      </div>
+
+      <!-- Checkout Embed Form -->
+      <div id="wcf-embed-checkout-form" class="wcf-embed-checkout-form wcf-embed-checkout-form-two-column shine-container">
+        <form id="orderForm" class="checkout woocommerce-checkout" novalidate>
+
+          <!-- Step 1: Product Selection Cards -->
+          <div class="wcf-product-option-wrap wcf-yp-skin-cards wcf-product-option-before-customer">
+            <h3 id="your_products_heading">
+              <i class="fa-solid fa-shoe-prints fk-accent-icon"></i>
+              <span><%= c.offersTitle || 'আপনার পছন্দের প্রোডাক্ট সিলেক্ট করুন' %></span>
+            </h3>
+
+            <div class="wcf-qty-options wcf-grid-2-col">
+              <% offers.forEach(function(offer){
+                   const oid = String(offer._id); const checked = oid === defaultOfferId; %>
+                <div class="wcf-qty-row offer-card <%= checked ? 'wcf-selected-product selected' : '' %>"
+                     data-offer-id="<%= oid %>" data-price="<%= offer.price %>" data-title="<%= offer.title %>"
+                     data-image="<%= offer.image || (product.images && product.images[0]) || '' %>">
+                  <div class="wcf-item">
+                    <div class="wcf-item-left">
+                      <div class="wcf-item-selector">
+                        <input type="radio" name="offer" value="<%= oid %>" <%= checked ? 'checked' : '' %> />
+                      </div>
+                      <div class="wcf-item-image">
+                        <% if (offer.image) { %>
+                          <img src="<%= offer.image %>"<%- srcsetAttr(offer.image, '(max-width: 600px) 72px, 96px') %> alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
+                        <% } else if (hasImages) { %>
+                          <img src="<%= product.images[0] %>"<%- srcsetAttr(product.images[0], '(max-width: 600px) 72px, 96px') %> alt="<%= offer.title %>" width="300" height="300" loading="lazy" decoding="async" />
+                        <% } else { %>
+                          <div class="wcf-item-placeholder">📦</div>
+                        <% } %>
+                      </div>
+                      <div class="wcf-item-details">
+                        <span class="wcf-item-title"><%= offer.title %></span>
+                        <div class="wcf-item-price-wrap">
+                          <span class="wcf-item-price"><%= offer.price %>৳</span>
+                          <% if (offer.comparePrice) { %>
+                            <span class="wcf-item-regular"><del><%= offer.comparePrice %>৳</del></span>
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                    <% if (offer.badge) { %>
+                      <div class="wcf-item-badge"><%= offer.badge %></div>
+                    <% } %>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+
+            <!-- Quantity hidden default 1 -->
+            <input type="hidden" id="qty" value="1" />
+          </div>
+
+          <!-- Step 2: Two Columns Layout (Billing on Left, Review on Right) -->
+          <div class="wcf-form-columns">
+
+            <!-- Column 1: Customer Info + Shipping Methods -->
+            <div class="wcf-col-1">
+              
+              <!-- Customer Billing Details -->
+              <div class="wcf-customer-info">
+                <h3 class="wcf-customer-info-title">
+                  <i class="fa-solid fa-user-pen fk-accent-icon"></i>
+                  <span>Billing details / আপনার তথ্য</span>
+                </h3>
+                <div class="woocommerce-billing-fields__field-wrapper">
+                  <% fields.forEach(function(field){ %><%- include('formField', { field: field }) %><% }); %>
+                </div>
+              </div>
+
+              <!-- Shipping / Delivery Charges -->
+              <div class="wcf-shipping-methods-wrapper">
+                <h3 class="wcf-shipping-methods-title">
+                  <i class="fa-solid fa-truck-ramp-box fk-secondary-icon"></i>
+                  <span>ডেলিভারি চার্জ</span>
+                </h3>
+                <div class="wcf-shipping-method-options">
+                  <ul id="shipping_method" class="woocommerce-shipping-methods zones">
+                    <% zones.forEach(function(zone){
+                         const zid = String(zone._id); const checked = zid === defaultZoneId; %>
+                      <li class="wcf-shipping-method-item zone-row <%= checked ? 'wcf-selected-shipping selected' : '' %>"
+                          data-zone-id="<%= zid %>" data-charge="<%= zone.charge %>">
+                        <input type="radio" name="zone" id="wcf_ship_<%= zid %>" value="<%= zid %>" <%= checked ? 'checked' : '' %> />
+                        <label for="wcf_ship_<%= zid %>">
+                          <span class="wcf-shipping-name"><%= zone.name %>:</span>
+                          <span class="wcf-shipping-cost amount zone-charge"><%= zone.charge %>৳</span>
+                        </label>
+                      </li>
+                    <% }); %>
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Column 2: Order Review & Confirmation -->
+            <div class="wcf-col-2">
+              <div class="wcf-order-wrap">
+                <h3 id="order_review_heading">
+                  <i class="fa-solid fa-receipt fk-gold-icon"></i>
+                  <span>আপনার অর্ডার বিবরণী (Your order)</span>
+                </h3>
+
+                <div id="order_review" class="woocommerce-checkout-review-order">
+                  <div id="discountAppliedAlert" class="fk-discount-applied-banner" style="display: none;">
+                    <i class="fa-solid fa-gift"></i>
+                    <span>আপনার জন্য অতিরিক্ত ২০৳ স্পেশাল ডিসকাউন্ট যুক্ত করা হয়েছে!</span>
+                  </div>
+                  <table class="shop_table woocommerce-checkout-review-order-table">
+                    <thead>
+                      <tr>
+                        <th class="product-name">Product</th>
+                        <th class="product-total fk-align-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="cart_item">
+                        <td class="product-name fk-review-name-cell">
+                          <img id="reviewProdImg"
+                               src="<%= imgThumb(((firstOffer && firstOffer.image) || (product.images && product.images[0]) || '')) %>"
+                               alt="Product" class="fk-review-thumb" width="44" height="44" />
+                          <div>
+                            <span id="reviewProdName" class="fk-review-name"><%= firstOffer.title || product.name %></span>
+                            <span id="reviewProdQty" class="product-quantity fk-review-qty">&times; 1</span>
+                            <div id="reviewVariantWrap" class="fk-review-variant-wrap" style="display: none; margin-top: 5px;">
+                              <span id="reviewVariantText" class="fk-review-variant-pill"></span>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="product-total fk-align-right fk-valign-middle">
+                          <span id="sumSubtotal" class="amount fk-review-subtotal">০৳</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr class="cart-subtotal">
+                        <th>Subtotal</th>
+                        <td class="fk-align-right"><span id="reviewSubtotalMirror" class="amount">০৳</span></td>
+                      </tr>
+                      <tr class="cart-discount fk-cart-discount" id="reviewDiscountRow" style="display: none; color: #16a34a;">
+                        <th>স্পেশাল ডিসকাউন্ট</th>
+                        <td class="fk-align-right"><strong>-<span id="sumDiscount" class="amount">২০৳</span></strong></td>
+                      </tr>
+                      <tr class="cart-shipping fk-cart-shipping">
+                        <th>ডেলিভারি চার্জ</th>
+                        <td class="fk-align-right"><span id="sumDelivery" class="amount">০৳</span></td>
+                      </tr>
+                      <tr class="order-total">
+                        <th>Total</th>
+                        <td class="fk-align-right"><strong><span id="sumTotal" class="amount fk-review-total">০৳</span></strong></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+
+                  <!-- COD Payment Box -->
+                  <div id="payment" class="woocommerce-checkout-payment">
+                    <ul class="wc_payment_methods payment_methods methods">
+                      <li class="wc_payment_method payment_method_cod">
+                        <input id="payment_method_cod" type="radio" name="payment_method" value="cod" checked disabled />
+                        <label for="payment_method_cod">
+                          <i class="fa-solid fa-circle-check fk-success-icon"></i>
+                          <span>Cash on delivery</span>
+                        </label>
+                        <div class="payment_box payment_method_cod">
+                          <p class="fk-payment-note">
+                            <i class="fa-solid fa-shield-halved fk-success-icon"></i> Pay with cash upon delivery. পণ্য হাতে পেয়ে মূল্য পরিশোধ করবেন।
+                          </p>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <!-- Privacy Notice -->
+                  <div class="woocommerce-privacy-policy-text">
+                    <p>আপনার ব্যক্তিগত তথ্য অর্ডার প্রসেসিং এবং দ্রুততম ডেলিভারির জন্য নিরাপদে ব্যবহার করা হবে।</p>
+                  </div>
+
+                  <!-- Mobile-only one-line COD note (the full payment box is hidden on phones to keep the form on one screen) -->
+                  <p class="fk-cod-mini"><i class="fa-solid fa-shield-halved"></i> ক্যাশ অন ডেলিভারি — পণ্য হাতে পেয়ে টাকা দিন</p>
+
+                  <!-- Place Order Submit Button -->
+                  <button type="submit" name="woocommerce_checkout_place_order" id="submitBtn" class="anim-flame-pulse shine-container">
+                    <span class="btn-shimmer"></span>
+                    <i class="fa-solid fa-lock fk-place-order-icon"></i>
+                    <span><%= c.buttonText || 'অর্ডার কনফার্ম করুন' %> &nbsp;<span id="btnTotal">০৳</span></span>
+                  </button>
+
+                  <p class="form-message" id="formMessage"></p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </form>
+
+        <!-- Thank you confirmation -->
+        <div class="thankyou" id="thankyou" hidden>
+          <div class="thankyou-icon">🎉</div>
+          <h2>ধন্যবাদ! আপনার অর্ডারটি গ্রহণ করা হয়েছে</h2>
+          <p>আপনার অর্ডার নম্বর <strong id="tyOrderNumber"></strong>।</p>
+          <div id="tyOrderDetails" class="ty-order-box" style="margin: 14px auto 18px; padding: 12px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; max-width: 440px; text-align: left;" hidden>
+            <p style="margin: 0 0 6px;"><strong>পণ্য / প্যাকেজ:</strong> <span id="tyOrderSummary"></span></p>
+            <p style="margin: 0;"><strong>সর্বমোট বিল:</strong> <strong id="tyOrderTotal" style="color: #16a34a;"></strong> (ক্যাশ অন ডেলিভারি)</p>
+          </div>
+          <p>আমাদের প্রতিনিধি শীঘ্রই কল করে অর্ডারটি কনফার্ম করবেন।</p>
+          <% if (storePhones.length) { %>
+          <div class="phone-btns">
+            <% storePhones.forEach(function(p){ %>
+              <a href="<%= p.telHref %>" class="btn btn-call"><i class="fa-solid fa-phone"></i> <%= p.label || 'সরাসরি যোগাযোগ করুন' %> <%= p.number %></a>
+              <% if (p.waHref) { %><a href="<%= p.waHref %>" class="btn btn-whatsapp" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp <%= p.number %></a><% } %>
+            <% }); %>
+          </div>
+          <% } %>
+        </div>
+
+      </div>
+
+    </div>
+  </section>

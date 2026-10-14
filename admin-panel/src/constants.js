@@ -65,3 +65,9 @@ export const LANDING_TEMPLATES = [
   { key: 'berry',    label: 'Berry',    primary: '#a21caf', button: '#22c55e' },
   { key: 'midnight', label: 'Midnight', primary: '#4338ca', button: '#22c55e' },
 ];
+
+/** Landing designs (structure/layout). Keys match server LAYOUT_KEYS. */
+export const LANDING_LAYOUTS = [
+  { key: 'classic',   label: 'Checkout first', desc: 'Order form at the top (fast buyers)' },
+  { key: 'spotlight', label: 'Content first',  desc: 'Product story & benefits, then the order form' },
+];

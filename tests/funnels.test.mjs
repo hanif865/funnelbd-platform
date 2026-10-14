@@ -67,6 +67,10 @@ export default {
     ok(r.body.product.template === 'ocean', 'valid template saved');
     r = await call(catalog.updateProduct, { query: { funnel: String(f2._id) }, body: { template: 'bogus-theme' } });
     ok(r.body.product.template === 'ocean', 'unknown template ignored (kept ocean)');
+    r = await call(catalog.updateProduct, { query: { funnel: String(f2._id) }, body: { layout: 'spotlight' } });
+    ok(r.body.product.layout === 'spotlight', 'valid layout saved');
+    r = await call(catalog.updateProduct, { query: { funnel: String(f2._id) }, body: { layout: 'nope' } });
+    ok(r.body.product.layout === 'spotlight', 'unknown layout ignored (kept spotlight)');
 
     // delete guards
     r = await call(funnel.deleteFunnel, { params: { id: String(f3._id) } });

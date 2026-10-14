@@ -14,6 +14,7 @@ import { normalizePhone, isValidBDPhone } from '../utils/phone.js';
 import { getTrackingConfig, toPublicConfig } from '../services/tracking/config.js';
 import { buildPurchaseJobs, buildMomentJobs } from '../services/tracking/index.js';
 import { extractCity } from '../services/tracking/hash.util.js';
+import { layoutView } from '../config/templates.js';
 import { enqueueTrackingJobs } from '../queues/tracking.queue.js';
 import { sendConfirmationSms } from '../services/sms.service.js';
 import { sendOrderNotification } from '../services/notify.service.js';
@@ -127,7 +128,7 @@ export async function renderLanding(req, res, next) {
     const defaultOffer = offers.find((o) => o.isDefault) || offers[0] || null;
     const defaultZone = zones.find((z) => z.isDefault) || zones[0] || null;
 
-    res.render('landing', {
+    res.render(layoutView(product.layout), {
       product,
       offers,
       fields,

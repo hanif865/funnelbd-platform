@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= product.name %></title>
+  <meta name="description" content="<%= (product.description || product.name).replace(/<[^>]+>/g,' ').slice(0,150) %>" />
+  <%# Font (Hind Siliguri) is self-hosted via @font-face in landing.css — no Google
+      Fonts connections. Preload the two Bengali weights used most (body 400,
+      headings 700) so text swaps to the real font quickly. Icons are an inline
+      SVG subset in landing.css (no Font Awesome CDN). %>
+  <link rel="preload" href="/public/fonts/hind-siliguri-v14-bengali-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/public/fonts/hind-siliguri-v14-bengali-700.woff2" as="font" type="font/woff2" crossorigin />
+  <% if (typeof inlineCss !== 'undefined' && inlineCss) { %>
+    <%# Production: styles are inlined so the stylesheet isn't render-blocking. %>
+    <style><%- inlineCss %></style>
+  <% } else { %>
+    <link rel="stylesheet" href="/public/css/landing.css?v=<%= assetVersion %>" />
+  <% } %>
+  <% if (product.images && product.images[0]) { %><link rel="preload" as="image" href="<%= product.images[0] %>" fetchpriority="high" /><% } %>
+</head>
+<body class="khaleshaat-theme fk-theme-<%= (product.template || 'classic') %> fk-layout-spotlight">
+  <%
+    const storeInfo = (settings && settings.storeInfo) || {};
+    const hasImages = product.images && product.images.length;
+    const c = product.content || {};
+    const reviewImages = c.reviewImages || [];
+    const firstOffer = offers[0] || {};
+    const toBn = (n) => String(n == null ? '' : n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+    // Spread helpline numbers down the page instead of bunching them all in one
+    // row: each contact spot picks a number, cycling through the list.
+    const contactAt = (i) => (storePhones.length ? storePhones[i % storePhones.length] : null);
+    // Responsive image attributes: emits srcset + sizes only when variant files
+    // exist (imgSrcset returns '' otherwise), so the plain src always works.
+    const srcsetAttr = (src, sizes) => {
+      const ss = typeof imgSrcset === 'function' ? imgSrcset(src) : '';
+      return ss ? ` srcset="${ss}" sizes="${sizes}"` : '';
+    };
+  %>
+
+  <!-- ── 1. TOP RED BANNER (Khaleshaat style) ── -->
+  <div class="rainbow-banner fk-not-sticky fk-no-sweep" data-section="top_banner">
+    <div class="fk-container fk-urgency-inner">
+      <span class="fk-urgency-text"><strong><%= c.brandTagline || product.name %></strong></span>
+    </div>
+  </div>
+
+  <!-- ── 1B. PRODUCT IMAGE SHOWCASE (moved above the checkout form) ── -->
+  <%- include("partials/gallery") %>
+
+  <!-- Trust strip: quick reasons to trust/buy, right above the form -->
+  <div class="fk-trust-strip-wrap">
+    <div class="fk-container">
+      <div class="fk-trust-strip">
+        <span><i class="fa-solid fa-shield-halved"></i> ১০০% অরিজিনাল পণ্য</span>
+        <span><i class="fa-solid fa-truck-fast"></i> সারাদেশে দ্রুত ডেলিভারি</span>
+        <span><i class="fa-solid fa-circle-check"></i> ক্যাশ অন ডেলিভারি — হাতে পেয়ে টাকা</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. HERO COPY & PRICE (gallery moved to the top) ── -->
+  <section class="fk-hero-section fk-hero-lower py-6">
+    <div class="fk-container">
+      
+      <!-- Hero Copy & Price Box -->
+      <div class="text-center my-6 fk-hero-copy">
+        <% if (c.trendingBadge) { %>
+          <span class="section-pill-badge fk-badge-primary">
+            <i class="fa-solid fa-fire-flame-curved"></i> <%= c.trendingBadge %>
+          </span>
+        <% } %>
+
+        <h2 class="hero-main-title"><%= product.name %></h2>
+        <% if (c.subheadline) { %><h3 class="hero-subtitle"><%= c.subheadline %></h3><% } %>
+
+        <!-- Fiery Price Box -->
+        <div class="fiery-price-box anim-flame-pulse shine-container">
+          <% if (firstOffer.comparePrice) { %>
+            <span class="hero-reg-price">রেগুলার প্রাইস <del class="fk-hero-reg-value"><%= toBn(firstOffer.comparePrice) %>/-</del> টাকা</span>
+          <% } %>
+          <span class="hero-sale-price">বর্তমান মূল্য <%= toBn(firstOffer.price || 550) %>/- টাকা</span>
+        </div>
+
+        <!-- Hero Order Button -->
+        <div class="my-4 fk-hero-cta-wrap">
+          <a href="#checkout" class="btn-elementor-red anim-flame-pulse shine-container js-scroll-checkout">
+            <i class="fa-solid fa-truck-fast"></i>
+            <span><%= c.buttonText || 'এখনই অর্ডার করুন' %> — <%= toBn(firstOffer.price || 550) %>৳</span>
+          </a>
+        </div>
+
+        <!-- Quote Box -->
+        <% if (c.heroSubtext) { %>
+          <div class="hero-quote-box">
+            <p class="fk-hero-quote-text">
+              <i class="fa-solid fa-quote-left fk-hero-quote-icon"></i>
+              <%= c.heroSubtext %>
+            </p>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Bold Highlight Headline -->
+      <% if (c.heroHighlight) { %>
+        <div class="text-center my-4">
+          <h2 class="elementor-heading-title"><span class="hl"><%= c.heroHighlight %></span></h2>
+        </div>
+      <% } %>
+
+      <!-- CTA Pair — order button + the primary helpline only (other numbers
+           appear further down the page so they aren't all bunched here). -->
+      <div class="cta-pair-wrap">
+        <a class="elementor-button btn-green js-scroll-checkout" href="#checkout">
+          <i class="fa-solid fa-cart-shopping"></i> <%= c.buttonText || 'এখনই অর্ডার করুন' %>
+        </a>
+        <% var heroPhone = contactAt(0); if (heroPhone) { %>
+          <a class="elementor-button btn-call" href="<%= heroPhone.telHref %>">
+            <i class="fa-solid fa-phone-volume"></i> <%= heroPhone.label || 'কল করুন' %> <%= heroPhone.number %>
+          </a>
+          <% if (heroPhone.waHref) { %>
+          <a class="elementor-button btn-whatsapp" href="<%= heroPhone.waHref %>" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp <%= heroPhone.number %>
+          </a>
+          <% } %>
+        <% } %>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 5. BENEFITS SECTION (Khaleshaat style) ── -->
+  <section class="section-card-boxed" data-section="benefits">
+    <div class="fk-container">
+      <div class="card-inner">
+        <h2 class="card-header-title"><%= c.benefitTitle || 'Magnetic Slimming Belt কেন পরবেন?' %></h2>
+        <div class="elementor-icon-list-wrap">
+          <% if (product.description) { %>
+            <%- product.description %>
+          <% } else { %>
+            <ul class="elementor-icon-list-items">
+              <li class="elementor-icon-list-item"><span class="icon-arrow">➤</span> ১00% অরিজিনাল চায়না থেকে ইমপোর্ট</li>
+              <li class="elementor-icon-list-item"><span class="icon-arrow">➤</span> নিয়মিত ব্যবহারে পেটের মেদ কমাতে সহায়তা করে</li>
+              <li class="elementor-icon-list-item"><span class="icon-arrow">➤</span> সারাদেশে দ্রুত ক্যাশ অন ডেলিভারি সুবিধা</li>
+            </ul>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mid-page helpline (second number, or the only one if just one is set) -->
+  <%- include('partials/contactRow', { phone: contactAt(1), heading: 'প্রোডাক্ট নিয়ে কোনো প্রশ্ন? এখনই কল বা WhatsApp করুন' }) %>
+
+  <!-- ── 4B. PRODUCT VIDEO (Optional) ── -->
+  <%
+     // Pull the 11-char video id out of any YouTube link shape (watch?v=,
+     // youtu.be/, shorts/, embed/, live/ — with or without ?si=/&t= extras).
+     var ytMatch = (c.videoUrl || '').match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+     var ytId = ytMatch ? ytMatch[1] : '';
+  %>
+  <% if (ytId) { %>
+    <section class="fk-video-section" data-section="product_video">
+      <div class="fk-container">
+        <div class="fk-video-wrap shine-container">
+          <%# Click-to-play facade: only a ~20KB thumbnail loads with the page; the ~1MB
+              YouTube player loads on tap (checkout.js swaps in the iframe with
+              referrerpolicy set — YouTube refuses embeds without a Referer, Error 153). %>
+          <button type="button" class="yt-facade" data-yt="<%= ytId %>" aria-label="ভিডিও চালু করুন">
+            <img src="https://i.ytimg.com/vi/<%= ytId %>/hqdefault.jpg" alt="প্রোডাক্ট ভিডিও" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="yt-play" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </section>
+  <% } %>
+
+  <!-- ── 6. USAGE SECTION (Khaleshaat style) ── -->
+  <% if (c.usageHtml) { %>
+    <section class="section-card-boxed" data-section="usage">
+      <div class="fk-container">
+        <div class="card-inner">
+          <h2 class="card-header-title green-bg"><%= c.usageTitle || 'কতক্ষণ ব্যবহার করবেন' %></h2>
+          <div class="elementor-icon-list-wrap usage-wrap">
+            <%- c.usageHtml %>
+          </div>
+        </div>
+      </div>
+    </section>
+  <% } %>
+
+  <!-- ── 7. BLACK INFO BAR (Khaleshaat style) ── -->
+  <% if (c.infoBar) { %>
+    <div class="khalesh-black-bar" data-section="info_bar">
+      <div class="fk-container">
+        <h2><%= c.infoBar %></h2>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- ── 2. CHECKOUT SECTION AT TOP (Khaleshaat exact design) ── -->
+  <!-- ── 2. CHECKOUT SECTION (shared partial; reused by every template) ── -->
+  <%- include("partials/checkout") %>
+
+  <!-- ── 3. SIZE CHART IMAGE (Khaleshaat exact position) ── -->
+  <% if (c.sizeChartImage) { %>
+    <section class="sizechart-section" data-section="size_chart">
+      <div class="fk-container">
+        <div class="sizechart-box">
+          <img src="<%= c.sizeChartImage %>" alt="সাইজ চার্ট" class="sizechart-img" loading="lazy" decoding="async" />
+        </div>
+      </div>
+    </section>
+  <% } %>
+
+  <!-- ── 8. REVIEWS SECTION (Khaleshaat style) ── -->
+  <section class="section-reviews-wrap" data-section="reviews">
+    <div class="fk-container">
+      <h2 class="reviews-main-title"><%= c.reviewsTitle || 'সম্মানিত গ্রাহকদের মতামত' %></h2>
+      
+      <% if (reviewImages.length) { %>
+        <div class="review-grid-khalesh">
+          <% reviewImages.forEach(function(src){ %>
+            <div class="review-item">
+              <img src="<%= src %>"<%- srcsetAttr(src, '(max-width: 620px) 100vw, 300px') %> alt="কাস্টমার রিভিউ" loading="lazy" decoding="async" />
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <p class="text-center text-muted">সম্মানিত গ্রাহকদের শতভাগ সন্তুষ্টির রিভিউ।</p>
+      <% } %>
+
+      <div class="text-center my-6">
+        <a href="#checkout" class="btn-elementor-red anim-flame-pulse shine-container js-scroll-checkout btn-lg-wide">
+          <i class="fa-solid fa-truck-fast"></i>
+          <span><%= c.buttonText || 'এখনই অর্ডার করুন' %> — <%= toBn(firstOffer.price || 550) %>৳</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pre-footer helpline (cycles back through the numbers) -->
+  <%- include('partials/contactRow', { phone: contactAt(2), heading: 'অর্ডার করতে সাহায্য লাগলে সরাসরি কথা বলুন' }) %>
+
+  <!-- ── 9. FOOTER ── -->
+  <footer class="fk-footer" data-section="footer">
+    <div class="fk-container fk-footer-inner">
+      <% if (storePhones.length) { %>
+      <p class="fk-footer-phone">📞 হেল্পলাইন:
+        <% storePhones.forEach(function(p, i){ %><%= i ? ' · ' : '' %><a href="<%= p.telHref %>"><strong><%= p.number %></strong></a><%= p.label ? ' (' + p.label + ')' : '' %><% }); %>
+      </p>
+      <% } %>
+      <p class="fk-footer-addr"><%= storeInfo.address || 'ঢাকা, বাংলাদেশ' %></p>
+      <p class="fk-footer-copy">© <%= new Date().getFullYear() %> <%= product.name %> · সর্বস্বত্ব সংরক্ষিত</p>
+    </div>
+  </footer>
+
+  <!-- ── 10. MOBILE STICKY BAR (Khaleshaat anim-flame-pulse) ── -->
+  <div class="sticky-bar hidden" id="stickyBar">
+    <div class="fk-container">
+      <a href="#checkout" class="sticky-order-btn anim-flame-pulse shine-container js-scroll-checkout">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span><%= c.buttonText || 'অর্ডার করুন' %> — <span id="stickyTotal">০৳</span></span>
+      </a>
+    </div>
+  </div>
+
+  <!-- ── 11. EXIT INTENT SURVEY & SPECIAL DISCOUNT MODAL ── -->
+  <div id="exitIntentModal" class="exit-modal-backdrop" aria-hidden="true">
+    <div class="exit-modal-dialog" role="dialog" aria-modal="true">
+      <button type="button" class="exit-modal-close" id="closeExitModalBtn" aria-label="Close">✕</button>
+
+      <!-- Main Survey / Offer View -->
+      <div id="exitModalMainContent">
+        <div class="exit-modal-badge">
+          <span>🛑 একটু অপেক্ষা করুন!</span>
+        </div>
+
+        <h3 class="exit-modal-title">
+          অর্ডার না করেই চলে যাচ্ছেন?
+        </h3>
+        <p class="exit-modal-subtitle">
+          আপনার কোনো সমস্যা বা প্রশ্ন থাকলে আমাদের জানান — আমরা সমাধান দেব!
+        </p>
+
+        <!-- Special 20 Tk Discount Box -->
+        <div class="exit-discount-card shine-container">
+          <div class="exit-discount-icon">🎁</div>
+          <div class="exit-discount-text">
+            <strong>আজকের স্পেশাল অফার!</strong>
+            <p>আপনি যদি এখনই অর্ডার করেন, আমরা আপনাকে অতিরিক্ত <span>২০ টাকা ডিসকাউন্ট</span> দেব!</p>
+          </div>
+        </div>
+
+        <!-- Feedback Reason Survey (Checkmarks - No typing required!) -->
+        <div class="exit-reasons-wrap">
+          <label class="exit-section-label">বের হয়ে যাওয়ার কারণ সিলেক্ট করুন (টিক দিন):</label>
+          <div class="exit-reason-options">
+            <label class="exit-reason-pill selected">
+              <input type="radio" name="exit_reason" value="দাম একটু বেশি মনে হচ্ছে" checked />
+              <span class="reason-check">✓</span>
+              <span class="reason-text">দাম একটু বেশি মনে হচ্ছে</span>
+            </label>
+            <label class="exit-reason-pill">
+              <input type="radio" name="exit_reason" value="কোয়ালিটি বা সাইজ নিয়ে সংশয় আছে" />
+              <span class="reason-check">✓</span>
+              <span class="reason-text">কোয়ালিটি বা সাইজ নিয়ে সংশয় আছে</span>
+            </label>
+            <label class="exit-reason-pill">
+              <input type="radio" name="exit_reason" value="ডেলিভারি চার্জ বেশি বা ডেলিভারি পেতে দেরি" />
+              <span class="reason-check">✓</span>
+              <span class="reason-text">ডেলিভারি চার্জ বেশি বা ডেলিভারি পেতে দেরি</span>
+            </label>
+            <label class="exit-reason-pill">
+              <input type="radio" name="exit_reason" value="পরে অর্ডার করব, এখন ভাবছি" />
+              <span class="reason-check">✓</span>
+              <span class="reason-text">পরে অর্ডার করব, এখন ভাবছি</span>
+            </label>
+            <label class="exit-reason-pill">
+              <input type="radio" name="exit_reason" value="অন্য কোনো সমস্যা" />
+              <span class="reason-check">✓</span>
+              <span class="reason-text">অন্য কোনো সমস্যা</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Phone Number Input for Lead / Discount -->
+        <div class="exit-phone-wrap">
+          <label for="exitLeadPhone" class="exit-section-label">
+            ২০৳ ডিসকাউন্ট পেতে বা সাহায্য পেতে মোবাইল নম্বর দিন:
+          </label>
+          <div class="exit-phone-input-box">
+            <span class="exit-phone-prefix">🇧🇩 +88</span>
+            <input type="tel" id="exitLeadPhone" placeholder="01XXXXXXXXX" maxlength="14" autocomplete="tel" inputmode="tel" />
+          </div>
+          <span class="exit-phone-error" id="exitPhoneError"></span>
+        </div>
+
+        <!-- Two Action Buttons -->
+        <div class="exit-actions-group">
+          <!-- Button 1: Apply 20 Tk Discount & Go to Checkout -->
+          <button type="button" id="exitClaimDiscountBtn" class="btn-exit-claim anim-flame-pulse">
+            <i class="fa-solid fa-gift"></i>
+            <span>২০৳ ডিসকাউন্টে এখনই অর্ডার করব</span>
+          </button>
+
+          <!-- Button 2: Call me back for assistance -->
+          <button type="button" id="exitRequestCallBtn" class="btn-exit-call">
+            <i class="fa-solid fa-phone-volume"></i>
+            <span>প্রতিনিধি আমাকে কল দিয়ে সমাধান দিক</span>
+          </button>
+        </div>
+
+        <button type="button" id="exitDismissBtn" class="exit-dismiss-link">
+          না, আমি ডিসকাউন্ট ছাড়াই বের হতে চাই
+        </button>
+      </div>
+
+      <!-- Success View (shown after requesting call) -->
+      <div id="exitModalSuccessContent" style="display: none;">
+        <div class="exit-success-icon">🎉</div>
+        <h3 class="exit-modal-title">ধন্যবাদ! আপনার অনুরোধ পেয়েছি</h3>
+        <p class="exit-modal-subtitle">
+          আমাদের সিনিয়র প্রতিনিধি খুব শীঘ্রই আপনার নম্বরে কল করে যেকোনো কনফিউশন সমাধান করবেন এবং সর্বোচ্চ ২০৳ ডিসকাউন্টে অর্ডারটি কনফার্ম করতে সহায়তা করবেন।
+        </p>
+        <button type="button" id="exitSuccessCloseBtn" class="btn-elementor-red my-4" style="width: 100%;">
+          ঠিক আছে
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    window.__FUNNEL__ = {
+      offers: <%- JSON.stringify(offers.map(function(o){ return { id: String(o._id), price: o.price, title: o.title, image: o.image || '' }; })) %>,
+      zones: <%- JSON.stringify(zones.map(function(z){ return { id: String(z._id), charge: z.charge, name: z.name }; })) %>,
+      freeDelivery: <%- JSON.stringify((settings && settings.freeDelivery) || { enabled: false, threshold: 0, allFree: false }) %>,
+      defaultOfferId: <%- JSON.stringify(defaultOfferId) %>,
+      defaultZoneId: <%- JSON.stringify(defaultZoneId) %>,
+      productId: <%- JSON.stringify(productId) %>,
+      accountId: <%- JSON.stringify(typeof accountId !== 'undefined' ? accountId : null) %>,
+      productImages: <%- JSON.stringify(product.images || []) %>
+    };
+    window.__TRACKING__ = <%- JSON.stringify(tracking) %>;
+  </script>
+  <script src="/public/js/tracker.js?v=<%= assetVersion %>" defer></script>
+  <script src="/public/js/checkout.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>
