@@ -261,9 +261,39 @@
     beacon('pageview', pvEventId, { custom: { contentIds: contentIds, vcEventId: vcEventId } });
   }
 
-  // AddToCart (Fires on single-product page load and whenever an offer package is chosen)
+  // PageView / ViewContent fire once, when the visitor first starts scrolling
+  // (not on load) — guarded so repeated scrolls never re-fire them.
+  var pageViewFired = false;
+  function ensurePageView() {
+    if (pageViewFired) return;
+    pageViewFired = true;
+    firePageView();
+  }
+
+  // Scroll50 — custom event when the visitor passes the halfway mark.
+  var scroll50Fired = false;
+  function fireScroll50() {
+    if (scroll50Fired) return;
+    scroll50Fired = true;
+
+    var eventId = 's50_' + uuid();
+    var contentIds = F.productId ? [String(F.productId)] : [];
+
+    if (window.fbq) {
+      window.fbq('trackCustom', 'Scroll50', { content_ids: contentIds, content_type: 'product', currency: 'BDT' }, { eventID: eventId });
+    }
+    if (window.ttq) {
+      window.ttq.track('Scroll50', { contents: contentIds.map(function (id) { return { content_id: id }; }), content_type: 'product', currency: 'BDT' }, { event_id: eventId });
+    }
+
+    beacon('scroll50', eventId, { custom: { contentIds: contentIds } });
+  }
+
+  // AddToCart (fires once, when the customer starts typing their phone number)
   var addToCartFired = false;
   function fireAddToCart(customSel) {
+    if (addToCartFired) return;
+    addToCartFired = true;
     var sel = customSel || currentSelection();
     var atcEventId = 'atc_' + uuid();
     var contentIds = sel.offerId ? [String(sel.offerId)] : (F.productId ? [String(F.productId)] : []);
@@ -524,24 +554,44 @@
     if (tt.enabled && tt.pixelId) loadTikTok(tt.pixelId);
     if (ga.enabled && ga.measurementId) loadGoogle(ga.measurementId);
 
-    // 1. Safe dual Browser + Server PageView / ViewContent
-    firePageView();
+    // Nothing fires on load. Events are driven by real engagement:
+    //   first scroll      → PageView + ViewContent
+    //   ≥50% scroll       → Scroll50 (custom)
+    //   phone typed       → AddToCart
+    //   name typed        → InitiateCheckout
+    //   order button      → (interaction count only, no pixel)
 
-    // 2. Single-product landing funnel: fire AddToCart for the default offer
-    setTimeout(function () {
-      fireAddToCart();
-    }, 250);
+    // 1. Scroll-driven PageView / ViewContent / Scroll50
+    function onScroll() {
+      ensurePageView();
+      var doc = document.documentElement;
+      var scrollable = (doc.scrollHeight || 0) - (window.innerHeight || 0);
+      var depth = scrollable > 0 ? (window.pageYOffset || doc.scrollTop || 0) / scrollable : 1;
+      if (depth >= 0.5) fireScroll50();
+      if (pageViewFired && scroll50Fired) window.removeEventListener('scroll', onScroll);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
 
-    // 3. InitiateCheckout on first interaction with form
-    var form = document.getElementById('orderForm');
-    if (form) {
-      var onFirst = function () {
-        fireInitiate();
-        form.removeEventListener('input', onFirst, true);
-        form.removeEventListener('focus', onFirst, true);
+    // 2. AddToCart when the customer types their phone number
+    var phoneEl = document.querySelector('#orderForm [name="phone"]');
+    if (phoneEl) {
+      var onPhoneType = function () {
+        if (!phoneEl.value) return;
+        fireAddToCart();
+        phoneEl.removeEventListener('input', onPhoneType);
       };
-      form.addEventListener('input', onFirst, true);
-      form.addEventListener('focus', onFirst, true);
+      phoneEl.addEventListener('input', onPhoneType);
+    }
+
+    // 3. InitiateCheckout when the customer types their name
+    var nameEl = document.querySelector('#orderForm [name="name"]');
+    if (nameEl) {
+      var onNameType = function () {
+        if (!nameEl.value) return;
+        fireInitiate();
+        nameEl.removeEventListener('input', onNameType);
+      };
+      nameEl.addEventListener('input', onNameType);
     }
 
     // 4. Section Dwell Time & Exit Tracker

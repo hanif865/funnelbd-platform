@@ -7,6 +7,24 @@ import { config } from '../config/index.js';
 import { normalizePhone } from '../utils/phone.js';
 import { sendToCourier, fraudCheck } from '../services/courier.service.js';
 import { getAccountStatus } from '../services/domain.service.js';
+import { buildCourierStatusJobs } from '../services/tracking/index.js';
+import { enqueueTrackingJobs } from '../queues/tracking.queue.js';
+import { reportError } from '../services/systemErrors.js';
+
+// Fire a server-side pixel conversion when an order reaches a courier outcome
+// (delivered/cancelled/returned), once per order+status. Mutates the order's
+// trackedCourierEvents; the caller persists the order. Never throws.
+const COURIER_EVENT_STATUSES = ['delivered', 'cancelled', 'returned'];
+async function maybeFireCourierEvent(order, status) {
+  if (!COURIER_EVENT_STATUSES.includes(status)) return;
+  if ((order.trackedCourierEvents || []).includes(status)) return;
+  order.trackedCourierEvents = [...(order.trackedCourierEvents || []), status];
+  try {
+    await enqueueTrackingJobs(buildCourierStatusJobs(order, status));
+  } catch (e) {
+    reportError('courier-status-tracking', e);
+  }
+}
 
 // The tenant this request belongs to (set by auth middleware), as an ObjectId
 // (aggregate $match does not auto-cast). Every order query is scoped to it so
@@ -155,6 +173,7 @@ export async function updateStatus(req, res, next) {
 
     order.status = status;
     order.statusHistory.push({ status, by: req.admin.name, at: new Date() });
+    await maybeFireCourierEvent(order, status); // delivered/cancelled/returned → pixel
     await order.save();
     res.json({ ok: true, order: order.toJSON() });
   } catch (err) {
@@ -226,6 +245,19 @@ export async function bulkStatus(req, res, next) {
       { _id: { $in: ids }, accountId: acct(req) },
       { $set: { status }, $push: { statusHistory: { status, by: req.admin.name, at: new Date() } } }
     );
+    // Fire courier-status pixel events for the ones that just crossed into a
+    // terminal status and haven't already fired it.
+    if (COURIER_EVENT_STATUSES.includes(status)) {
+      const affected = await Order.find({
+        _id: { $in: ids },
+        accountId: acct(req),
+        trackedCourierEvents: { $ne: status },
+      });
+      for (const order of affected) {
+        await maybeFireCourierEvent(order, status);
+        await order.save();
+      }
+    }
     res.json({ ok: true, updated: r.modifiedCount });
   } catch (err) {
     next(err);

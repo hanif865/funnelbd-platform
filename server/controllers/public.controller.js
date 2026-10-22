@@ -291,7 +291,7 @@ export async function saveDraft(req, res) {
 
 /**
  * POST /api/track — server-side mirror for browser-originated moments
- * (pageview, add_to_cart, initiate). The browser fires its pixels AND beacons here with the
+ * (pageview, scroll50, add_to_cart, initiate). The browser fires its pixels AND beacons here with the
  * same eventId so FB/TikTok deduplicate. Identifiers are pulled from cookies +
  * request (fbp/fbc/ip/ua/session/ttp) plus any phone/name/address the user has typed.
  *
@@ -300,7 +300,7 @@ export async function saveDraft(req, res) {
 export async function trackMoment(req, res) {
   try {
     const { moment, eventId, fields = {}, custom = {}, sourceUrl, productId, accountId } = req.body || {};
-    if (!['pageview', 'add_to_cart', 'initiate'].includes(moment) || !eventId) {
+    if (!['pageview', 'scroll50', 'add_to_cart', 'initiate'].includes(moment) || !eventId) {
       return res.status(204).end();
     }
     // Same event id twice (retries, old cached tracker.js) would reach the ad

@@ -109,19 +109,8 @@
       if (radio) radio.checked = on;
     });
     recompute();
-
-    if (window.fbdTrackAddToCart) {
-      var selOffer = findOffer(id);
-      if (selOffer) {
-        window.fbdTrackAddToCart({
-          offerId: selOffer.id,
-          offerTitle: selOffer.title,
-          price: selOffer.price,
-          qty: state.qty,
-          value: selOffer.price * state.qty,
-        });
-      }
-    }
+    // AddToCart no longer fires on offer selection — the tracker fires it only
+    // when the customer types their phone number (see tracker.js).
   }
 
   function selectZone(id) {

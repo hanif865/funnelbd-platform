@@ -26,10 +26,16 @@ const CURRENCY = 'BDT';
  */
 const EVENT_MAP = {
   pageview: { facebook: ['PageView', 'ViewContent'], tiktok: ['ViewContent'], google: [] },
+  scroll50: { facebook: ['Scroll50'], tiktok: ['Scroll50'], google: [] }, // custom engagement event
   add_to_cart: { facebook: ['AddToCart'], tiktok: ['AddToCart'], google: [] },
   initiate: { facebook: ['InitiateCheckout'], tiktok: ['InitiateCheckout'], google: [] },
   purchase: { facebook: ['Purchase'], tiktok: ['CompletePayment'], google: ['purchase'] },
 };
+
+// Courier fulfilment → custom conversion events (server-side only; no browser
+// counterpart). Lets ad platforms optimise/report on actually-delivered COD
+// orders, not just placed ones.
+const COURIER_EVENT_NAME = { delivered: 'Delivered', cancelled: 'Cancelled', returned: 'Returned' };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -216,6 +222,64 @@ export function buildPurchaseJobs(order, sourceUrl) {
   return jobs;
 }
 
+/** Build server-side custom-event jobs for a courier status change
+ *  (delivered / cancelled / returned). Deterministic event id per order+status
+ *  so a re-send deduplicates. actionSource 'system_generated' (offline event). */
+export function buildCourierStatusJobs(order, status, sourceUrl) {
+  const eventName = COURIER_EVENT_NAME[status];
+  if (!eventName) return [];
+  const t = order.tracking || {};
+  const city = extractCity(order.customer?.address, order.deliveryZoneName);
+  const identifiers = {
+    phone: order.customer?.phone,
+    name: order.customer?.name,
+    address: order.customer?.address,
+    zoneName: order.deliveryZoneName,
+    city,
+    country: 'bd',
+    externalId: t.externalId || '',
+    fbp: t.fbp,
+    fbc: t.fbc || (t.fbclid ? `fb.1.${Date.now()}.${t.fbclid}` : ''),
+    fbclid: t.fbclid,
+    ttclid: t.ttclid,
+    ttp: t.ttp,
+    ip: t.ip,
+    userAgent: t.userAgent,
+    gaClientId: t.gaClientId || '',
+  };
+  const eventId = `${status}_${order._id}`;
+  const value = order.total;
+  const contentId = String(order.offerId);
+  const url = sourceUrl || eventSourceUrl('/');
+  const jobs = [];
+
+  jobs.push({
+    platform: 'facebook', eventName, eventId, orderId: order._id,
+    eventInput: {
+      eventId, eventTime: Math.floor(Date.now() / 1000), eventSourceUrl: url,
+      actionSource: 'system_generated', userData: buildFacebookUserData(identifiers),
+      customData: {
+        currency: CURRENCY, value, content_type: 'product', content_ids: [contentId],
+        order_id: String(order.orderNumber), order_status: status,
+      },
+    },
+  });
+  jobs.push({
+    platform: 'tiktok', eventName, eventId, orderId: order._id,
+    eventInput: {
+      eventId, eventTime: Math.floor(Date.now() / 1000), pageUrl: url,
+      user: buildTikTokUserData(identifiers),
+      properties: {
+        currency: CURRENCY, value, content_type: 'product',
+        contents: [{ content_id: contentId, content_name: order.offerTitle, quantity: order.quantity, price: order.unitPrice }],
+      },
+    },
+  });
+
+  jobs.forEach((j) => { j.productId = order.productId || null; j.accountId = order.accountId || null; });
+  return jobs;
+}
+
 /**
  * Build jobs for a browser-originated moment (pageview/add_to_cart/initiate). FB + TikTok
  * only (GA4 handled by gtag on the browser). Identifiers are whatever the
@@ -290,4 +354,4 @@ function buildMomentCustomData(custom = {}) {
 }
 
 export { EVENT_MAP };
-export default { runTrackingJob, buildPurchaseJobs, buildMomentJobs, EVENT_MAP };
+export default { runTrackingJob, buildPurchaseJobs, buildMomentJobs, buildCourierStatusJobs, EVENT_MAP };

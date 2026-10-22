@@ -64,6 +64,9 @@ const orderSchema = new mongoose.Schema(
     status: { type: String, enum: ORDER_STATUSES, default: 'new' },
     statusHistory: { type: [statusHistorySchema], default: [] },
     notes: { type: [noteSchema], default: [] },
+    // Courier-status pixel events already fired (delivered/cancelled/returned) —
+    // so a status flip-flop never double-sends the same conversion.
+    trackedCourierEvents: { type: [String], default: [] },
 
     // Attribution + identifiers captured at order time — the fuel for
     // server-side Purchase events (Phase 2).
